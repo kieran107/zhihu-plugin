@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.14
+// @version      5.21.4-iphone.15
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -39,6 +39,7 @@
       "listImageMaxLines": 2,
       "answerImageMaxLines": 2,
       "floatingCollapse": true,
+      "readOnlyComments": true,
       "compactFeed": true,
       "feedBatchSize": 10,
       "feedSummaryLines": 2
@@ -340,6 +341,7 @@
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
     document.documentElement.classList.add("jim-iphone");
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
+    document.documentElement.classList.toggle("jimi-readonly-comments", IPHONE_PRESET.mobile.readOnlyComments);
     const viewportContent = "width=device-width, initial-scale=1, viewport-fit=cover";
     const setViewport = () => {
       const metas = [...document.head.querySelectorAll('meta[name="viewport"]')];
@@ -554,7 +556,7 @@
       html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
         display: block; position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
         box-sizing: border-box; width: calc((100% - 18px) / 4); height: 44px;
-        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid var(--jimi-feed-line); border-radius: 14px;
+        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid #fff; border-radius: 14px;
         background: var(--jimi-pill-bg); color: var(--jimi-feed-text); box-shadow: 0 1px 3px #0001;
         font-size: 13px; line-height: 42px; cursor: pointer; touch-action: manipulation;
       }
@@ -565,8 +567,10 @@
         margin-left: 0 !important; margin-right: 0 !important;
         overflow-x: auto; white-space: nowrap; gap: 4px;
       }
-      html.jim-iphone .ContentItem-actions.is-fixed {
-        position: static !important; transform: none !important; box-shadow: none !important;
+      /* 原生 Sticky 在滚动中切换多种定位状态；全部归入文档流，只有自建收起按钮悬浮。 */
+      html.jim-iphone .AnswerItem .ContentItem-actions {
+        position: static !important; inset: auto !important; transform: none !important;
+        transition: none !important; animation: none !important; box-shadow: none !important;
       }
       /* 保留原生赞同、评论；原生收起只隐藏，供回答内的悬浮按钮调用。 */
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :not(.jimi-answer-author):not(:has(.VoteButton)):not(:has(.Zi--Comment, .ZDI--ChatBubbleFill24)),
@@ -612,6 +616,60 @@
       html.jim-iphone :is(.Modal-content, .Comments-container, .CommentsV2,
         .css-16zdamy, .css-18ld3w0) { min-width: 0 !important; max-width: 100% !important; }
       html.jim-iphone .Modal-closeButton { right: 8px !important; top: 8px !important; z-index: 2; }
+      /* 页内评论与全部回复弹窗共用回答的颜色、细边线和 14px 圆角。 */
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) {
+        border: 1px solid var(--jimi-feed-line) !important; border-radius: 14px !important;
+        background: var(--jimi-feed-bg) !important; color: var(--jimi-feed-text) !important;
+        box-shadow: none !important; overflow: hidden;
+      }
+      html.jim-iphone[data-theme] .css-u76jt1 { margin: 16px 0 0 !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) :is(div, span, p, a, button) {
+        color: inherit !important; background-color: transparent !important; border-color: var(--jimi-feed-line) !important;
+      }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) svg { fill: currentColor !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1onritu {
+        padding: 12px 14px !important; min-height: 44px; box-sizing: border-box;
+        border-bottom: 1px solid var(--jimi-feed-line) !important; box-shadow: none !important; font-size: 14px; font-weight: 500;
+      }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 {
+        border: 1px solid var(--jimi-feed-line) !important; border-radius: 14px; overflow: hidden;
+      }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > div { padding: 4px 10px; font-size: 12px; cursor: pointer; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > .css-m0zh86 { background: var(--jimi-pill-bg) !important; }
+      html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) { padding: 0 14px !important; }
+      html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) > [data-id] + [data-id] { border-top: 1px solid var(--jimi-feed-line); }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) :is(.css-jp43l4, .css-13445jb, .css-8axkqi) { padding: 14px 0 !important; }
+      html.jim-iphone[data-theme] .css-1aq8hf9 .css-8axkqi { border-bottom: 0 !important; }
+      html.jim-iphone[data-theme] .css-34podr > [data-id] { padding: 0 14px; border-bottom: 0 !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) [data-id] [data-id] {
+        margin: 0 0 8px 34px; padding: 0 10px; border-radius: 14px; background: var(--jimi-pill-bg) !important;
+      }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1kwt8l8 { margin: 0 !important; padding: 10px 0 !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1jll2aj { margin-right: 10px; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .Avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-14nvvry { min-width: 0; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-swj9d4 { font-size: 13px; font-weight: 500; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent {
+        margin-top: 6px; font-size: 15px !important; font-weight: 400 !important; line-height: 1.65 !important; overflow-wrap: anywhere;
+      }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent p { margin: 0 0 .5em; font: inherit !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 12px; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-7dh30y {
+        margin: 0 0 12px 34px; min-height: 36px; padding: 4px 12px; border: 0 !important; border-radius: 14px;
+        background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted) !important; font-size: 13px;
+      }
+      html.jim-iphone[data-theme] .css-1aq8hf9 :is(.css-1e7fksk, .Modal-content, .css-tpyajk) { border-radius: inherit; }
+      html.jim-iphone[data-theme] .css-1aq8hf9 .Modal-content { padding: 0 !important; }
+      html.jim-iphone[data-theme] .css-1aq8hf9 .css-tpyajk > .css-1onritu { padding-right: 48px !important; }
+      html.jim-iphone[data-theme] .css-1aq8hf9 > button[aria-label="关闭"] {
+        position: absolute; top: 0; right: 4px; width: 44px; height: 44px; color: var(--jimi-feed-muted) !important;
+      }
+      html.jimi-readonly-comments :is(.css-1fo89v5, .css-59erns, .css-a3pqj1, .css-1ij6qqc) { display: none !important; }
+      html.jim-iphone[data-theme] .css-kt4t4n {
+        position: static !important; transform: none !important; box-shadow: none !important;
+        background: var(--jimi-feed-bg) !important; padding: 8px 0 !important; border: 0 !important;
+      }
+      html.jim-iphone[data-theme] .css-kt4t4n .css-1503iqi { color: var(--jimi-feed-muted) !important; font-size: 13px; }
       html.jim-iphone .jimi-message { max-width: calc(100vw - 24px); height: auto; min-height: 44px; padding: 8px; box-sizing: border-box; }
       html.jim-iphone .jimi-preview img { max-width: 100%; max-height: 90vh; object-fit: contain; }
       html.jim-iphone .jimi-preview video { max-width: 100%; max-height: 90vh; }
