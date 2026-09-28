@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.6
+// @version      5.21.4-iphone.7
 // @description  基于知乎修改器 5.21.4，适配 iPhone Safari 请求桌面网站。单栏阅读、代码预设、无设置面板。参数见同目录「iPhone知乎-参数.md」。
 // @compatible   edge Violentmonkey
 // @compatible   edge Tampermonkey
@@ -38,6 +38,7 @@
       "floatingCollapse": true,
       "compactFeed": true,
       "feedBatchSize": 20,
+      "feedPullScreenRatio": 0.33,
       "feedSummaryLines": 1
     },
     "script": {
@@ -349,6 +350,14 @@
       for (const meta of metas) {
         if (meta.content !== viewportContent) meta.content = viewportContent;
       }
+      const colors = [...document.head.querySelectorAll('meta[name="theme-color"]')];
+      if (!colors.length) {
+        const meta = document.createElement("meta");
+        meta.name = "theme-color";
+        document.head.appendChild(meta);
+        colors.push(meta);
+      }
+      for (const meta of colors) if (meta.content !== "#ffffff") meta.content = "#ffffff";
     };
     setViewport();
     // 知乎可能在脚本启动后插入或改写 viewport；保留手势缩放能力。
@@ -362,6 +371,8 @@
       html.jim-iphone { min-width: 0 !important; -webkit-text-size-adjust: 100%; }
       html.jim-iphone body { min-width: 0 !important; margin: 0; width: 100%; }
       html.jim-iphone #root { min-width: 0; max-width: 100%; }
+      html.jim-iphone, html.jim-iphone :is(body, #root, .App-main, .AppHeader, .Topstory,
+        .Topstory-container, .Topstory-mainColumn, #TopstoryContent, .ListShortcut) { background: #fff !important; }
       html.jim-iphone :is(.Topstory, .Topstory-container, .Topstory-mainColumn,
         .Search-container, .SearchMain, .QuestionPage, .Question-main, .Question-mainColumn,
         .QuestionHeader, .QuestionHeader-content, .QuestionHeader-main, .QuestionHeader-footer-inner,
@@ -511,14 +522,24 @@
       html.jimi-compact-feed .jimi-feed-answer > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
       html.jimi-compact-feed .jimi-feed-item .ContentItem-actions { background: var(--jimi-feed-bg) !important; }
       html.jim-iphone .jimi-batch-extra,
-      html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem):not(.jimi-batch-footer) { display: none !important; }
-      html.jim-iphone .jimi-batch-footer {
-        display: block; width: 100%; min-height: 88px; padding: 20px 18px max(24px, env(safe-area-inset-bottom));
-        box-sizing: border-box; border: 0; background: transparent; color: #70757d;
-        font: inherit; font-size: 14px; line-height: 1.8; text-align: center; white-space: pre-line; touch-action: pan-y;
+      html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
+      html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
+      html.jim-iphone .jimi-batch-full {
+        transform: var(--jimi-batch-transform, none); transition: transform 220ms ease-out;
       }
-      html.jim-iphone .jimi-batch-footer:focus-visible { outline: 2px solid #06f; outline-offset: -4px; }
+      html.jim-iphone .jimi-batch-footer {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+        display: flex; align-items: center; justify-content: center;
+        height: var(--jimi-batch-pull, 0px); padding: 0 18px; overflow: hidden;
+        box-sizing: border-box; background: #fff; color: #70757d; opacity: 0; pointer-events: none;
+        font: inherit; font-size: 14px; line-height: 1.8; text-align: center;
+        transition: height 220ms ease-out, opacity 160ms ease-out;
+      }
+      html.jim-iphone .jimi-batch-dragging { transition: none; }
       html.jim-iphone .jimi-batch-footer[hidden] { display: none !important; }
+      @media (prefers-reduced-motion: reduce) {
+        html.jim-iphone :is(.jimi-batch-full, .jimi-batch-footer) { transition: none; }
+      }
       html.jim-iphone .jimi-iphone-collapse { display: none; }
       html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
         display: block; position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
@@ -569,7 +590,7 @@
       html.jim-iphone .css-16xeo9u button { min-height: 44px; flex-shrink: 0; white-space: nowrap; }
       html.jim-iphone .css-kt4t4n { width: 100%; max-width: 100%; margin-left: 0 !important; margin-right: 0 !important; box-sizing: border-box; }
       html.jim-iphone .Post-SideActions { display: none !important; }
-      ${hideSidebars ? `html.jim-iphone :is(.GlobalSideBar, .Topstory-sideBar, .Question-sideColumn,
+      ${hideSidebars ? `html.jim-iphone :is(.GlobalSideBar, .Topstory-sideBar, .Topstory-container > [data-za-detail-view-path-module="RightSideBar"], .Question-sideColumn,
         .SearchSideBar, .Profile-sideColumn, .CollectionsDetailPage-sideColumn, .Post-Row-Content-right) { display: none !important; }` : ""}
       ${hideOpenApp ? `html.jim-iphone :is(.OpenInAppButton, .OpenInAppBanner, .DownloadGuide,
         .MobileAppHeader-downloadLink, .AppBanner, .css-rg1dmv, .css-1gapyfo, .css-183aq3r, .css-wfkf2m) { display: none !important; }` : ""}
@@ -586,12 +607,24 @@
   };
 
   // 每批只展示过滤后的前 N 条；换批走知乎正常刷新，保留原生展开和评论状态管理。
-  var iPhoneFeedBatch = { root: null, count: 0, full: false, refreshing: false, footer: null };
+  var iPhoneFeedBatch = { root: null, count: 0, full: false, refreshing: false, footer: null, pull: 0 };
+  var setIPhoneBatchPull = (distance, dragging = false) => {
+    const { root, footer } = iPhoneFeedBatch;
+    iPhoneFeedBatch.pull = distance;
+    root?.style.setProperty("--jimi-batch-transform", distance ? `translate3d(0, -${distance}px, 0)` : "none");
+    root?.classList.toggle("jimi-batch-dragging", dragging);
+    if (!footer) return;
+    footer.style.setProperty("--jimi-batch-pull", `${distance}px`);
+    footer.style.opacity = distance ? "1" : "0";
+    footer.setAttribute("aria-hidden", distance ? "false" : "true");
+    footer.classList.toggle("jimi-batch-dragging", dragging);
+  };
   var isIPhoneBatchPage = () => isIPhoneLayout && Number(IPHONE_PRESET.mobile.feedBatchSize) > 0 &&
     location.hostname === "www.zhihu.com" && location.pathname === "/";
   var syncIPhoneFeedBatch = () => {
     const root = isIPhoneBatchPage() && document.querySelector('.Topstory-recommend');
     if (!root) {
+      setIPhoneBatchPull(0);
       iPhoneFeedBatch.root?.classList.remove("jimi-batch-full");
       iPhoneFeedBatch.footer?.remove();
       Object.assign(iPhoneFeedBatch, { root: null, full: false, count: 0, footer: null });
@@ -610,15 +643,16 @@
     root.classList.toggle("jimi-batch-full", iPhoneFeedBatch.full);
     let footer = iPhoneFeedBatch.footer;
     if (!footer) {
-      footer = document.createElement("button");
-      footer.type = "button";
+      footer = document.createElement("div");
       footer.className = "jimi-batch-footer";
-      footer.onclick = refreshIPhoneFeedBatch;
+      footer.setAttribute("role", "status");
+      footer.setAttribute("aria-live", "polite");
+      footer.setAttribute("aria-hidden", "true");
+      document.body.appendChild(footer);
       iPhoneFeedBatch.footer = footer;
     }
     footer.hidden = !iPhoneFeedBatch.full;
-    if (!iPhoneFeedBatch.refreshing) footer.textContent = `本批 ${iPhoneFeedBatch.count} 条已到底\n再上划一次换一批 · 也可点这里`;
-    if (root.lastElementChild !== footer) root.appendChild(footer);
+    if (!iPhoneFeedBatch.full) setIPhoneBatchPull(0);
   };
   var shouldStopIPhoneFeedRequest = (input, options) => {
     if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full) return false;
@@ -631,11 +665,10 @@
   var refreshIPhoneFeedBatch = () => {
     if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full || iPhoneFeedBatch.refreshing) return;
     if (navigator.onLine === false) {
-      iPhoneFeedBatch.footer.textContent = "当前离线\n联网后点击这里换一批";
+      iPhoneFeedBatch.footer.textContent = "当前离线，请联网后再上拉";
       return;
     }
     iPhoneFeedBatch.refreshing = true;
-    iPhoneFeedBatch.footer.disabled = true;
     iPhoneFeedBatch.footer.textContent = "正在刷新下一批…";
     try {
       sessionStorage.setItem("jimIPhoneBatchRefresh", JSON.stringify({ path: location.pathname, restoration: history.scrollRestoration }));
@@ -644,7 +677,7 @@
     window.scrollTo(0, 0);
     location.reload();
   };
-  var isIPhoneBatchSwipe = (start, touch) => start.y - touch.clientY >= 72 && Math.abs(start.x - touch.clientX) < (start.y - touch.clientY) * .6;
+  var isIPhoneBatchSwipe = (start, touch) => start.y - touch.clientY >= start.threshold && Math.abs(start.x - touch.clientX) < (start.y - touch.clientY) * .6;
   var initIPhoneFeedBatch = () => {
     if (!(Number(IPHONE_PRESET.mobile.feedBatchSize) > 0)) return;
     try {
@@ -659,33 +692,44 @@
         }), { once: true });
       }
     } catch { /* 存储不可用时使用刷新前已回到顶部的位置。 */ }
-    let start = null, armed = false;
-    const atBottom = () => iPhoneFeedBatch.footer?.getClientRects().length &&
+    let start = null, armed = false, moved = false;
+    const atBottom = () => iPhoneFeedBatch.root?.isConnected &&
       document.documentElement.scrollHeight - window.scrollY - window.innerHeight <= 8;
     const reset = () => {
       start = null;
       armed = false;
-      if (!iPhoneFeedBatch.refreshing && iPhoneFeedBatch.footer) iPhoneFeedBatch.footer.textContent = `本批 ${iPhoneFeedBatch.count} 条已到底\n再上划一次换一批 · 也可点这里`;
+      moved = false;
+      if (!iPhoneFeedBatch.refreshing) setIPhoneBatchPull(0);
     };
     document.addEventListener("touchstart", (event) => {
       reset();
       if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full || iPhoneFeedBatch.refreshing || event.touches.length !== 1 || !atBottom()) return;
-      if (event.target.closest('a, input, textarea, select, [contenteditable="true"], [role="dialog"], .Modal-wrapper, button:not(.jimi-batch-footer):not(.jimi-feed-preview)')) return;
+      if (!iPhoneFeedBatch.root.contains(event.target)) return;
+      if (event.target.closest('a, input, textarea, select, [contenteditable="true"], [role="dialog"], .Modal-wrapper, button:not(.jimi-feed-preview)')) return;
       if (document.activeElement?.matches('input, textarea, [contenteditable="true"]')) return;
-      start = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+      const height = window.visualViewport?.height || window.innerHeight;
+      const ratio = Math.max(.2, Math.min(.5, Number(IPHONE_PRESET.mobile.feedPullScreenRatio) || .33));
+      start = { x: event.touches[0].clientX, y: event.touches[0].clientY, threshold: height * ratio };
     }, { passive: true });
     document.addEventListener("touchmove", (event) => {
       if (!start) return;
-      if (event.touches.length !== 1 || !atBottom()) { reset(); return; }
+      if (event.touches.length !== 1 || !isIPhoneBatchPage() || !iPhoneFeedBatch.full) { reset(); return; }
       const touch = event.touches[0];
+      const distance = start.y - touch.clientY;
+      if (distance < 0 || Math.abs(start.x - touch.clientX) > Math.max(24, distance)) { reset(); return; }
       armed = isIPhoneBatchSwipe(start, touch);
-      if (start.y > touch.clientY && event.cancelable) event.preventDefault();
-      iPhoneFeedBatch.footer.textContent = armed ? "松手刷新下一批 ↑" : "继续上划，松手换一批 ↑";
+      moved ||= distance > 8;
+      if (distance > 0 && event.cancelable) event.preventDefault();
+      const pull = Math.min(distance, start.threshold) + Math.min(Math.max(0, distance - start.threshold) * .2, start.threshold * .25);
+      setIPhoneBatchPull(pull, true);
+      const text = armed ? "松开刷新 ↑" : "继续上拉 ↑";
+      if (iPhoneFeedBatch.footer.textContent !== text) iPhoneFeedBatch.footer.textContent = text;
     }, { passive: false });
     document.addEventListener("touchend", (event) => {
       const refresh = armed && event.touches.length === 0;
+      if (moved && event.cancelable) event.preventDefault();
+      if (refresh) refreshIPhoneFeedBatch();
       reset();
-      if (refresh) { if (event.cancelable) event.preventDefault(); refreshIPhoneFeedBatch(); }
     }, { passive: false });
     document.addEventListener("touchcancel", reset, { passive: true });
   };
