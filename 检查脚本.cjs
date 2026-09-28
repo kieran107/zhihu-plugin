@@ -42,7 +42,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, blockIPhoneAnswerTextClick, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -104,8 +104,8 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   let nativeButton = { click: () => { throw new Error('Stale native button'); } };
   const content = {
     closest: () => null,
-    querySelector: selector => selector === '.jimi-iphone-collapse' ? added[0] : nativeButton,
-    appendChild: button => added.push(button)
+    querySelector: selector => selector === '.jimi-iphone-collapse' ? added[0] : selector.includes('retract') ? nativeButton : null,
+    insertBefore: button => added.push(button)
   };
   const documentMock = {
     querySelectorAll: () => [content, { querySelector: () => null }],
@@ -122,6 +122,51 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   added = [];
   load('Macintosh Safari', 0, 1440, 900, documentMock).syncIPhoneCollapseButtons();
   assert.equal(added.length, 0);
+  // Expanded footer uses current author data without replacing native actions or duplicating itself.
+  let footerAuthor, authorCreates = 0;
+  const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
+  const avatar = { src: 'https://pic1.zhimg.com/avatar.jpg' };
+  const answer = { querySelector: selector => selector.includes('name') ? profile : avatar, getAttribute: () => '{}' };
+  const plainLink = { href: '/should-not-open', tabIndex: 0, hasAttribute() { return !!this.href; }, removeAttribute() { delete this.href; } };
+  const nativeActions = { querySelector: () => footerAuthor, prepend: element => { footerAuthor = element; authorCreates++; } };
+  const rich = { querySelectorAll: () => [plainLink], querySelector: () => nativeActions, closest: () => answer };
+  const footerAPI = load('iPhone Safari', 5, 402, 874, {
+    querySelectorAll: () => [rich],
+    createElement: () => {
+      const img = { getAttribute() { return this.src; } }, label = {};
+      return { dataset: {}, querySelector: selector => selector === 'img' ? img : label,
+        setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; } };
+    }
+  });
+  footerAPI.syncIPhoneExpandedAnswers();
+  footerAPI.syncIPhoneExpandedAnswers();
+  assert.equal(authorCreates, 1);
+  assert.equal(footerAuthor.querySelector('span').textContent, '作者甲');
+  assert.equal(footerAuthor.querySelector('img').src, avatar.src);
+  assert.equal(footerAuthor.href, '/people/author');
+  assert.equal(plainLink.href, undefined);
+  assert.equal(plainLink.tabIndex, -1);
+  // The later external-link pass must not restore an empty href on plain text.
+  const linkPass = source.slice(source.indexOf('  var initLinkChanger ='), source.indexOf('  var addAnswerCopyLink ='));
+  const external = { href: 'https://link.zhihu.com/?target=https%3A%2F%2Fexample.com', hasAttribute: () => true, classList: { add() {} } };
+  vm.runInNewContext(linkPass + '\ninitLinkChanger();', {
+    domA: selector => selector.startsWith('a.external') ? [plainLink, external] : []
+  });
+  assert.equal(plainLink.href, undefined);
+  assert.equal(external.href, 'https://example.com');
+  profile.textContent = '作者乙';
+  footerAPI.syncIPhoneExpandedAnswers();
+  assert.equal(authorCreates, 1);
+  assert.equal(footerAuthor.querySelector('span').textContent, '作者乙');
+  for (const [text, media, blocked] of [[true, false, true], [true, true, false], [false, false, false]]) {
+    let prevented = false, stopped = false;
+    footerAPI.blockIPhoneAnswerTextClick({
+      target: { closest: selector => selector.startsWith('img') ? media : text },
+      preventDefault: () => { prevented = true; }, stopImmediatePropagation: () => { stopped = true; }
+    });
+    assert.equal(prevented, blocked);
+    assert.equal(stopped, blocked);
+  }
   assert.equal(api.formatIPhoneFeedVotes(3035), '3035 人赞同');
   assert.equal(api.formatIPhoneFeedVotes(123456), '123456 人赞同');
   assert.equal(api.formatIPhoneFeedVotes(0), '0 人赞同');
@@ -193,7 +238,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
     processingData2: async rows => { assert.equal(rows, pendingRows); order.push('filtered'); },
     myListenList: { loaded: false, init: () => assert.fail('Batch filtering depended on loaded flag') },
     myListenSearchListItem: { init() {} }, myListenAnswer: { init() {} }, myListenUserHomeList: { init() {} },
-    syncIPhoneFeedBatch: () => order.push('counted'), syncIPhoneFeed() {}, syncIPhoneCollapseButtons() {}
+    syncIPhoneFeedBatch: () => order.push('counted'), syncIPhoneFeed() {}, syncIPhoneExpandedAnswers() {}, syncIPhoneCollapseButtons() {}
   });
   assert.deepEqual(order, ['filtered', 'counted']);
   // Safari's isolated script window is not the window the site calls fetch on.
@@ -213,5 +258,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap and no bottom refresh code');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer and plain-text click protection');
 })().catch(error => { console.error(error); process.exitCode = 1; });
