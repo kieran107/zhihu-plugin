@@ -1,7 +1,10 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.7
+// @version      5.21.4-iphone.11
+// @homepageURL  https://github.com/kieran107/zhihu-plugin
+// @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
+// @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
 // @description  基于知乎修改器 5.21.4，适配 iPhone Safari 请求桌面网站。单栏阅读、代码预设、无设置面板。参数见同目录「iPhone知乎-参数.md」。
 // @compatible   edge Violentmonkey
 // @compatible   edge Tampermonkey
@@ -37,13 +40,14 @@
       "answerImageMaxLines": 2,
       "floatingCollapse": true,
       "compactFeed": true,
-      "feedBatchSize": 20,
+      "feedBatchSize": 15,
       "feedPullScreenRatio": 0.33,
-      "feedSummaryLines": 1
+      "feedPullDamping": 0.6,
+      "feedSummaryLines": 2
     },
     "script": {
       "fetchInterceptStatus": true,
-      "theme": "0",
+      "theme": "2",
       "themeLight": "4",
       "themeDark": "1",
       "fontSizeForList": "16",
@@ -357,12 +361,17 @@
         document.head.appendChild(meta);
         colors.push(meta);
       }
-      for (const meta of colors) if (meta.content !== "#ffffff") meta.content = "#ffffff";
+      const themeColor = document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#ffffff";
+      for (const meta of colors) if (meta.content !== themeColor) meta.content = themeColor;
     };
     setViewport();
     // 知乎可能在脚本启动后插入或改写 viewport；保留手势缩放能力。
     new MutationObserver(setViewport).observe(document.head, {
       childList: true, subtree: true, attributes: true, attributeFilter: ["name", "content"]
+    });
+    // 复用原作的系统主题监听，浏览器工具栏颜色跟随页面实际主题。
+    new MutationObserver(setViewport).observe(document.documentElement, {
+      attributes: true, attributeFilter: ["data-theme"]
     });
     const { pagePadding, hideSidebars, hideOpenApp, openInternalLinksInSameTab } = IPHONE_PRESET.mobile;
     const listImageHeight = (Number(IPHONE_PRESET.script.fontSizeForList) || 17) * 1.67 * IPHONE_PRESET.mobile.listImageMaxLines;
@@ -372,7 +381,7 @@
       html.jim-iphone body { min-width: 0 !important; margin: 0; width: 100%; }
       html.jim-iphone #root { min-width: 0; max-width: 100%; }
       html.jim-iphone, html.jim-iphone :is(body, #root, .App-main, .AppHeader, .Topstory,
-        .Topstory-container, .Topstory-mainColumn, #TopstoryContent, .ListShortcut) { background: #fff !important; }
+        .Topstory-container, .Topstory-mainColumn, #TopstoryContent, .ListShortcut) { background: var(--jimi-feed-bg) !important; }
       html.jim-iphone :is(.Topstory, .Topstory-container, .Topstory-mainColumn,
         .Search-container, .SearchMain, .QuestionPage, .Question-main, .Question-mainColumn,
         .QuestionHeader, .QuestionHeader-content, .QuestionHeader-main, .QuestionHeader-footer-inner,
@@ -477,14 +486,16 @@
       html.jim-iphone .TopstoryItem .RichContent.is-collapsed .RichContent-inner { max-height: none !important; }
       html.jim-iphone .ContentItem-more { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; }
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
-      html.jimi-compact-feed {
+      html.jim-iphone {
+        color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed;
       }
-      html.jimi-compact-feed[data-theme="dark"] {
+      html.jim-iphone[data-theme="dark"] {
+        color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333;
       }
       html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
-      html.jimi-compact-feed .jimi-feed-item {
+      html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
         margin: 0 !important; padding: 12px max(18px, env(safe-area-inset-left)) 0 max(18px, env(safe-area-inset-right)) !important;
         border: 0 !important;
         border-radius: 0 !important; box-shadow: none !important; background: var(--jimi-feed-bg) !important;
@@ -516,8 +527,9 @@
       }
       html.jimi-compact-feed .jimi-feed-avatar { width: 24px !important; height: 24px !important; flex: 0 0 24px; border-radius: 50%; object-fit: cover; }
       html.jimi-compact-feed .jimi-feed-avatar[hidden] { display: none !important; }
-      html.jimi-compact-feed .jimi-feed-author { max-width: 34%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-      html.jimi-compact-feed .jimi-feed-counts { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      html.jimi-compact-feed .jimi-feed-author { min-width: 0; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      html.jimi-compact-feed .jimi-feed-votes { flex: 0 0 auto; white-space: nowrap; }
+      html.jimi-compact-feed .jimi-feed-votes:empty { display: none; }
       html.jimi-compact-feed .jimi-feed-item .ContentItem-title { margin: 0 0 14px; line-height: 1.45; font-weight: 600; }
       html.jimi-compact-feed .jimi-feed-answer > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
       html.jimi-compact-feed .jimi-feed-item .ContentItem-actions { background: var(--jimi-feed-bg) !important; }
@@ -531,7 +543,7 @@
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
         display: flex; align-items: center; justify-content: center;
         height: var(--jimi-batch-pull, 0px); padding: 0 18px; overflow: hidden;
-        box-sizing: border-box; background: #fff; color: #70757d; opacity: 0; pointer-events: none;
+        box-sizing: border-box; background: var(--jimi-feed-bg); color: var(--jimi-feed-muted); opacity: 0; pointer-events: none;
         font: inherit; font-size: 14px; line-height: 1.8; text-align: center;
         transition: height 220ms ease-out, opacity 160ms ease-out;
       }
@@ -540,11 +552,13 @@
       @media (prefers-reduced-motion: reduce) {
         html.jim-iphone :is(.jimi-batch-full, .jimi-batch-footer) { transition: none; }
       }
-      html.jim-iphone .jimi-iphone-collapse { display: none; }
+      html.jim-iphone .jimi-iphone-collapse {
+        display: none; border: 1px solid #c9cdd4; background: #fffffff2; color: #175199;
+      }
       html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
         display: block; position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
         width: 68px; min-height: 44px; margin: 0 0 0 auto; padding: 0 10px;
-        border: 1px solid #c9cdd4; border-radius: 22px; background: #fffffff2; color: #175199;
+        border-radius: 22px;
         box-shadow: 0 2px 8px #0002; font-size: 14px; line-height: 44px; cursor: pointer; touch-action: manipulation;
       }
       html.jim-iphone[data-theme="dark"] .jimi-iphone-collapse { background: #242424f2; color: #adc9ed; border-color: #555; }
@@ -677,7 +691,7 @@
     window.scrollTo(0, 0);
     location.reload();
   };
-  var isIPhoneBatchSwipe = (start, touch) => start.y - touch.clientY >= start.threshold && Math.abs(start.x - touch.clientX) < (start.y - touch.clientY) * .6;
+  var isIPhoneBatchSwipe = (start, touch) => (start.y - touch.clientY) * start.damping >= start.threshold && Math.abs(start.x - touch.clientX) < (start.y - touch.clientY) * .6;
   var initIPhoneFeedBatch = () => {
     if (!(Number(IPHONE_PRESET.mobile.feedBatchSize) > 0)) return;
     try {
@@ -709,7 +723,8 @@
       if (document.activeElement?.matches('input, textarea, [contenteditable="true"]')) return;
       const height = window.visualViewport?.height || window.innerHeight;
       const ratio = Math.max(.2, Math.min(.5, Number(IPHONE_PRESET.mobile.feedPullScreenRatio) || .33));
-      start = { x: event.touches[0].clientX, y: event.touches[0].clientY, threshold: height * ratio };
+      const damping = Math.max(.5, Math.min(1, Number(IPHONE_PRESET.mobile.feedPullDamping) || .6));
+      start = { x: event.touches[0].clientX, y: event.touches[0].clientY, threshold: height * ratio, damping };
     }, { passive: true });
     document.addEventListener("touchmove", (event) => {
       if (!start) return;
@@ -720,7 +735,8 @@
       armed = isIPhoneBatchSwipe(start, touch);
       moved ||= distance > 8;
       if (distance > 0 && event.cancelable) event.preventDefault();
-      const pull = Math.min(distance, start.threshold) + Math.min(Math.max(0, distance - start.threshold) * .2, start.threshold * .25);
+      const resisted = distance * start.damping;
+      const pull = Math.min(resisted, start.threshold) + Math.min(Math.max(0, resisted - start.threshold) * .2, start.threshold * .25);
       setIPhoneBatchPull(pull, true);
       const text = armed ? "松开刷新 ↑" : "继续上拉 ↑";
       if (iPhoneFeedBatch.footer.textContent !== text) iPhoneFeedBatch.footer.textContent = text;
@@ -745,10 +761,8 @@
     // 只保留近期头像资料，与原作长列表模式一起控制内存，不保存回答正文。
     while (iPhoneFeedAuthors.size > 200) iPhoneFeedAuthors.delete(iPhoneFeedAuthors.keys().next().value);
   };
-  var formatIPhoneFeedCounts = (votes, comments) => [
-    [votes, "赞同"], [comments, "评论"]
-  ].filter(([value]) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0)
-    .map(([value, label]) => `${Number(value).toLocaleString("zh-CN")} ${label}`).join(" · ");
+  var formatIPhoneFeedVotes = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0
+    ? `${Number(value)} 人赞同` : "";
   var iPhoneAvatarObserver;
   var iPhoneAvatarTargets = new Set();
   var loadIPhoneFeedAvatar = async (content) => {
@@ -801,7 +815,7 @@
       const authorName = zop.authorName || author.name || "";
       let excerpt = content.querySelector('.RichContent-inner .RichText')?.textContent.replace(/\s+/g, " ").trim() || "";
       if (authorName && (excerpt.startsWith(authorName + "：") || excerpt.startsWith(authorName + ":"))) excerpt = excerpt.slice(authorName.length + 1).trim();
-      const counts = formatIPhoneFeedCounts(card.upvote_num, card.comment_num);
+      const votes = formatIPhoneFeedVotes(card.upvote_num);
       const avatar = author.avatar_url || author.avatarUrl || content.querySelector('.AuthorInfo-avatar')?.src || "";
       let preview = content.querySelector(':scope > .jimi-feed-preview');
       if (!preview) {
@@ -809,18 +823,19 @@
         preview.type = "button";
         preview.className = "jimi-feed-preview";
         preview.setAttribute("aria-expanded", "false");
-        preview.innerHTML = '<span class="jimi-feed-title"></span><span class="jimi-feed-excerpt"></span><span class="jimi-feed-meta"><img class="jimi-feed-avatar" alt="" hidden><span class="jimi-feed-author"></span><span class="jimi-feed-counts"></span></span>';
+        preview.innerHTML = '<span class="jimi-feed-title"></span><span class="jimi-feed-excerpt"></span><span class="jimi-feed-meta"><img class="jimi-feed-avatar" alt="" hidden><span class="jimi-feed-author"></span><span class="jimi-feed-votes"></span></span>';
         preview.onclick = () => content.querySelector('.RichContent.is-collapsed .ContentItem-more')?.click();
         content.prepend(preview);
       }
-      const signature = JSON.stringify([title, excerpt, authorName, counts, avatar]);
+      const signature = JSON.stringify([title, excerpt, authorName, votes, avatar]);
       if (preview.dataset.signature !== signature) {
         preview.dataset.signature = signature;
         preview.setAttribute("aria-label", `展开回答：${title}`);
         preview.querySelector('.jimi-feed-title').textContent = title;
         preview.querySelector('.jimi-feed-excerpt').textContent = excerpt;
         preview.querySelector('.jimi-feed-author').textContent = authorName;
-        preview.querySelector('.jimi-feed-counts').textContent = (authorName && counts ? "· " : "") + counts;
+        preview.querySelector('.jimi-feed-author').title = authorName;
+        preview.querySelector('.jimi-feed-votes').textContent = votes;
         const image = preview.querySelector('img');
         image.hidden = !/^https:\/\//.test(avatar);
         image.onerror = () => {
