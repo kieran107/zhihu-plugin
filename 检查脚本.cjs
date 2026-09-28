@@ -42,7 +42,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest, isIPhoneBatchSwipe, initIPhoneFeedBatch };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -158,34 +158,25 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   await failedAPI.loadIPhoneFeedAvatar(failed);
   assert.equal(requests, 2);
   assert.equal(failedAPI.iPhoneFeedAuthors.size, 0);
-  // Count filtered, visible rows rather than raw API rows; overflow never replaces the first 15.
+  // Count filtered, visible rows rather than raw API rows; overflow never replaces the first 10.
   const makeClasses = (names = []) => {
     const values = new Set(names);
     return { contains: name => values.has(name), remove: name => values.delete(name), toggle: (name, yes) => yes ? values.add(name) : values.delete(name) };
   };
   const rows = Array.from({ length: 25 }, (_, i) => ({ classList: makeClasses(i < 3 ? ['jimi-hidden-item'] : []), querySelector: () => ({}) }));
-  let footerCount = 0, reloaded = 0, top = null;
-  const makeStyle = () => ({ setProperty(name, value) { this[name] = value; } });
-  const root = { isConnected: true, contains: target => !target.outside, style: makeStyle(), classList: makeClasses(), querySelectorAll: () => rows };
-  const location = { hostname: 'www.zhihu.com', pathname: '/', origin: 'https://www.zhihu.com', href: 'https://www.zhihu.com/', reload: () => reloaded++ };
-  const handlers = {};
-  const session = new Map();
-  const batchWindow = { innerHeight: 400, scrollY: 600, scrollTo: (x, y) => { top = y; }, addEventListener() {} };
+  const root = { classList: makeClasses(), querySelectorAll: () => rows };
+  const location = { hostname: 'www.zhihu.com', pathname: '/', origin: 'https://www.zhihu.com', href: 'https://www.zhihu.com/' };
   const batchAPI = load('iPhone Safari', 5, 402, 874, {
     querySelector: () => root,
-    documentElement: { scrollHeight: 1000 },
-    body: { appendChild: () => footerCount++ },
-    createElement: tag => ({ tagName: tag.toUpperCase(), style: makeStyle(), classList: makeClasses(), setAttribute() {}, remove() {} }),
-    addEventListener: (name, fn) => { handlers[name] = fn; }
-  }, { location, URL, getComputedStyle: () => ({ display: 'block' }), window: batchWindow, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem: key => session.get(key), setItem: (key, value) => session.set(key, value), removeItem: key => session.delete(key) } });
+    createElement: () => assert.fail('Batch cap must not create refresh controls'),
+    addEventListener: () => assert.fail('Batch cap must not register touch gestures')
+  }, { location, URL, getComputedStyle: () => ({ display: 'block' }) });
   batchAPI.syncIPhoneFeedBatch();
   batchAPI.syncIPhoneFeedBatch();
-  assert.equal(batchAPI.iPhoneFeedBatch.count, 15);
+  assert.equal(batchAPI.iPhoneFeedBatch.count, 10);
   assert.equal(batchAPI.iPhoneFeedBatch.full, true);
-  assert.equal(rows.filter(row => row.classList.contains('jimi-batch-extra')).length, 7);
-  assert.equal(footerCount, 1);
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.tagName, 'DIV');
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.onclick, undefined, 'No click-to-refresh control');
+  assert.equal(rows.filter(row => row.classList.contains('jimi-batch-extra')).length, 12);
+  assert.doesNotMatch(source, /feedPullScreenRatio|feedPullDamping|setIPhoneBatchPull|refreshIPhoneFeedBatch|isIPhoneBatchSwipe|initIPhoneFeedBatch|jimi-batch-footer|jimIPhoneBatchRefresh/);
   const nextFeed = 'https://www.zhihu.com/api/v3/feed/topstory/recommend?action=down';
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), true);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(new Request(nextFeed)), true);
@@ -193,62 +184,6 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed.replace('down', 'pull')), false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest('/api/v4/comment_v5/answers/1'), false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed.replace('www.zhihu.com', 'example.com')), false);
-  assert.equal(batchAPI.isIPhoneBatchSwipe({ x: 0, y: 600, threshold: 874 * .33, damping: .6 }, { clientX: 0, clientY: 120 }), false);
-  assert.equal(batchAPI.isIPhoneBatchSwipe({ x: 0, y: 600, threshold: 874 * .33, damping: .6 }, { clientX: 0, clientY: 119 }), true);
-  assert.equal(batchAPI.isIPhoneBatchSwipe({ x: 0, y: 300, threshold: 402 * .33, damping: .6 }, { clientX: 0, clientY: 78 }), true);
-  assert.equal(batchAPI.isIPhoneBatchSwipe({ x: 0, y: 300, threshold: 132, damping: .6 }, { clientX: 200, clientY: 100 }), false);
-  // Reaching the bottom in the current swipe is not a refresh; a fresh gesture is required.
-  batchAPI.initIPhoneFeedBatch();
-  const touch = y => ({ touches: [{ clientX: 50, clientY: y }], target: { closest: () => null }, cancelable: true, preventDefault() {} });
-  batchWindow.scrollY = 300;
-  handlers.touchstart(touch(200));
-  batchWindow.scrollY = 600;
-  handlers.touchmove(touch(100));
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  const outside = touch(300);
-  outside.target.outside = true; // Lightboxes and dialogs outside the list must not refresh it.
-  handlers.touchstart(outside);
-  handlers.touchmove(touch(100));
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  // A short pull follows at 60% of finger travel, then returns to the last answer without refreshing.
-  handlers.touchstart(touch(300));
-  handlers.touchmove(touch(200));
-  assert.equal(batchAPI.iPhoneFeedBatch.pull, 60);
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.textContent, '继续上拉 ↑');
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  assert.equal(batchAPI.iPhoneFeedBatch.pull, 0);
-  assert.equal(root.style['--jimi-batch-transform'], 'none');
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.style.opacity, '0');
-  // A gesture that passed the old 132px threshold must now fall short after damping.
-  handlers.touchstart(touch(300));
-  handlers.touchmove(touch(100));
-  assert.equal(batchAPI.iPhoneFeedBatch.pull, 120);
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.textContent, '继续上拉 ↑');
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  // Reversing below the threshold and cancelling an armed pull both cancel refresh.
-  handlers.touchstart(touch(300));
-  handlers.touchmove(touch(70));
-  assert.equal(batchAPI.iPhoneFeedBatch.footer.textContent, '松开刷新 ↑');
-  handlers.touchmove(touch(220));
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  handlers.touchstart(touch(300));
-  handlers.touchmove(touch(70));
-  handlers.touchcancel();
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 0);
-  assert.equal(batchAPI.iPhoneFeedBatch.pull, 0);
-  handlers.touchstart(touch(300));
-  handlers.touchmove(touch(70));
-  handlers.touchend({ touches: [] });
-  handlers.touchend({ touches: [] });
-  assert.equal(reloaded, 1);
-  assert.equal(top, 0);
-  assert.equal(JSON.parse(session.get('jimIPhoneBatchRefresh')).restoration, 'auto');
   // A consumed upstream "loaded" flag must not skip filtering newly rendered batch rows.
   const fastTask = source.slice(source.indexOf('  async function runFastTasks()'), source.indexOf('  async function runHeavyTasks()'));
   const order = [], pendingRows = [{}];
@@ -278,5 +213,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered batches, damped half-screen gesture, spring return, cancellation and no click refresh');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap and no bottom refresh code');
 })().catch(error => { console.error(error); process.exitCode = 1; });

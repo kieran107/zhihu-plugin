@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.11
+// @version      5.21.4-iphone.12
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -40,9 +40,7 @@
       "answerImageMaxLines": 2,
       "floatingCollapse": true,
       "compactFeed": true,
-      "feedBatchSize": 15,
-      "feedPullScreenRatio": 0.33,
-      "feedPullDamping": 0.6,
+      "feedBatchSize": 10,
       "feedSummaryLines": 2
     },
     "script": {
@@ -339,7 +337,6 @@
   );
   var initIPhoneLayout = () => {
     if (!isIPhoneLayout) return;
-    initIPhoneFeedBatch();
     document.documentElement.classList.add("jim-iphone");
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
     const viewportContent = "width=device-width, initial-scale=1, viewport-fit=cover";
@@ -381,7 +378,7 @@
       html.jim-iphone body { min-width: 0 !important; margin: 0; width: 100%; }
       html.jim-iphone #root { min-width: 0; max-width: 100%; }
       html.jim-iphone, html.jim-iphone :is(body, #root, .App-main, .AppHeader, .Topstory,
-        .Topstory-container, .Topstory-mainColumn, #TopstoryContent, .ListShortcut) { background: var(--jimi-feed-bg) !important; }
+        .Topstory-container, .Topstory-mainColumn, .Topstory-recommend, #TopstoryContent, .ListShortcut) { background: var(--jimi-feed-bg) !important; }
       html.jim-iphone :is(.Topstory, .Topstory-container, .Topstory-mainColumn,
         .Search-container, .SearchMain, .QuestionPage, .Question-main, .Question-mainColumn,
         .QuestionHeader, .QuestionHeader-content, .QuestionHeader-main, .QuestionHeader-footer-inner,
@@ -517,13 +514,13 @@
       }
       html.jimi-compact-feed .jimi-feed-excerpt {
         display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: ${IPHONE_PRESET.mobile.feedSummaryLines};
-        margin-top: 4px; font-size: ${IPHONE_PRESET.script.fontSizeForList}px; font-weight: 400;
+        margin-top: 8px; font-size: ${IPHONE_PRESET.script.fontSizeForList}px; font-weight: 400;
         line-height: 1.4; color: var(--jimi-feed-muted) !important; overflow: hidden; overflow-wrap: anywhere;
       }
       html.jimi-compact-feed .jimi-feed-excerpt:empty { display: none; }
       html.jimi-compact-feed .jimi-feed-meta {
-        display: flex; align-items: center; gap: 7px; margin-top: 6px; min-width: 0;
-        font-size: 13px; font-weight: 400; line-height: 24px; color: var(--jimi-feed-muted) !important;
+        display: flex; align-items: center; gap: 7px; margin-top: 10px; min-width: 0;
+        font-size: 14px; font-weight: 400; line-height: 24px; color: var(--jimi-feed-muted) !important;
       }
       html.jimi-compact-feed .jimi-feed-avatar { width: 24px !important; height: 24px !important; flex: 0 0 24px; border-radius: 50%; object-fit: cover; }
       html.jimi-compact-feed .jimi-feed-avatar[hidden] { display: none !important; }
@@ -536,22 +533,6 @@
       html.jim-iphone .jimi-batch-extra,
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
-      html.jim-iphone .jimi-batch-full {
-        transform: var(--jimi-batch-transform, none); transition: transform 220ms ease-out;
-      }
-      html.jim-iphone .jimi-batch-footer {
-        position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-        display: flex; align-items: center; justify-content: center;
-        height: var(--jimi-batch-pull, 0px); padding: 0 18px; overflow: hidden;
-        box-sizing: border-box; background: var(--jimi-feed-bg); color: var(--jimi-feed-muted); opacity: 0; pointer-events: none;
-        font: inherit; font-size: 14px; line-height: 1.8; text-align: center;
-        transition: height 220ms ease-out, opacity 160ms ease-out;
-      }
-      html.jim-iphone .jimi-batch-dragging { transition: none; }
-      html.jim-iphone .jimi-batch-footer[hidden] { display: none !important; }
-      @media (prefers-reduced-motion: reduce) {
-        html.jim-iphone :is(.jimi-batch-full, .jimi-batch-footer) { transition: none; }
-      }
       html.jim-iphone .jimi-iphone-collapse {
         display: none; border: 1px solid #c9cdd4; background: #fffffff2; color: #175199;
       }
@@ -620,28 +601,15 @@
     }
   };
 
-  // 每批只展示过滤后的前 N 条；换批走知乎正常刷新，保留原生展开和评论状态管理。
-  var iPhoneFeedBatch = { root: null, count: 0, full: false, refreshing: false, footer: null, pull: 0 };
-  var setIPhoneBatchPull = (distance, dragging = false) => {
-    const { root, footer } = iPhoneFeedBatch;
-    iPhoneFeedBatch.pull = distance;
-    root?.style.setProperty("--jimi-batch-transform", distance ? `translate3d(0, -${distance}px, 0)` : "none");
-    root?.classList.toggle("jimi-batch-dragging", dragging);
-    if (!footer) return;
-    footer.style.setProperty("--jimi-batch-pull", `${distance}px`);
-    footer.style.opacity = distance ? "1" : "0";
-    footer.setAttribute("aria-hidden", distance ? "false" : "true");
-    footer.classList.toggle("jimi-batch-dragging", dragging);
-  };
+  // 推荐只展示过滤后的前 N 条；到底停止加载，刷新交给浏览器原生操作。
+  var iPhoneFeedBatch = { root: null, count: 0, full: false };
   var isIPhoneBatchPage = () => isIPhoneLayout && Number(IPHONE_PRESET.mobile.feedBatchSize) > 0 &&
     location.hostname === "www.zhihu.com" && location.pathname === "/";
   var syncIPhoneFeedBatch = () => {
     const root = isIPhoneBatchPage() && document.querySelector('.Topstory-recommend');
     if (!root) {
-      setIPhoneBatchPull(0);
       iPhoneFeedBatch.root?.classList.remove("jimi-batch-full");
-      iPhoneFeedBatch.footer?.remove();
-      Object.assign(iPhoneFeedBatch, { root: null, full: false, count: 0, footer: null });
+      Object.assign(iPhoneFeedBatch, { root: null, full: false, count: 0 });
       return;
     }
     const limit = Math.max(1, Math.min(100, Math.floor(Number(IPHONE_PRESET.mobile.feedBatchSize))));
@@ -655,18 +623,6 @@
     iPhoneFeedBatch.count = Math.min(count, limit);
     iPhoneFeedBatch.full = count >= limit;
     root.classList.toggle("jimi-batch-full", iPhoneFeedBatch.full);
-    let footer = iPhoneFeedBatch.footer;
-    if (!footer) {
-      footer = document.createElement("div");
-      footer.className = "jimi-batch-footer";
-      footer.setAttribute("role", "status");
-      footer.setAttribute("aria-live", "polite");
-      footer.setAttribute("aria-hidden", "true");
-      document.body.appendChild(footer);
-      iPhoneFeedBatch.footer = footer;
-    }
-    footer.hidden = !iPhoneFeedBatch.full;
-    if (!iPhoneFeedBatch.full) setIPhoneBatchPull(0);
   };
   var shouldStopIPhoneFeedRequest = (input, options) => {
     if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full) return false;
@@ -676,80 +632,6 @@
         url.origin === location.origin && url.pathname === "/api/v3/feed/topstory/recommend" && url.searchParams.get("action") === "down";
     } catch { return false; }
   };
-  var refreshIPhoneFeedBatch = () => {
-    if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full || iPhoneFeedBatch.refreshing) return;
-    if (navigator.onLine === false) {
-      iPhoneFeedBatch.footer.textContent = "当前离线，请联网后再上拉";
-      return;
-    }
-    iPhoneFeedBatch.refreshing = true;
-    iPhoneFeedBatch.footer.textContent = "正在刷新下一批…";
-    try {
-      sessionStorage.setItem("jimIPhoneBatchRefresh", JSON.stringify({ path: location.pathname, restoration: history.scrollRestoration }));
-      history.scrollRestoration = "manual";
-    } catch { /* 禁用存储时仍可正常刷新。 */ }
-    window.scrollTo(0, 0);
-    location.reload();
-  };
-  var isIPhoneBatchSwipe = (start, touch) => (start.y - touch.clientY) * start.damping >= start.threshold && Math.abs(start.x - touch.clientX) < (start.y - touch.clientY) * .6;
-  var initIPhoneFeedBatch = () => {
-    if (!(Number(IPHONE_PRESET.mobile.feedBatchSize) > 0)) return;
-    try {
-      const saved = JSON.parse(sessionStorage.getItem("jimIPhoneBatchRefresh") || "null");
-      sessionStorage.removeItem("jimIPhoneBatchRefresh");
-      if (saved?.path === location.pathname) {
-        history.scrollRestoration = "manual";
-        window.scrollTo(0, 0);
-        window.addEventListener("load", () => requestAnimationFrame(() => {
-          window.scrollTo(0, 0);
-          history.scrollRestoration = saved.restoration === "manual" ? "manual" : "auto";
-        }), { once: true });
-      }
-    } catch { /* 存储不可用时使用刷新前已回到顶部的位置。 */ }
-    let start = null, armed = false, moved = false;
-    const atBottom = () => iPhoneFeedBatch.root?.isConnected &&
-      document.documentElement.scrollHeight - window.scrollY - window.innerHeight <= 8;
-    const reset = () => {
-      start = null;
-      armed = false;
-      moved = false;
-      if (!iPhoneFeedBatch.refreshing) setIPhoneBatchPull(0);
-    };
-    document.addEventListener("touchstart", (event) => {
-      reset();
-      if (!isIPhoneBatchPage() || !iPhoneFeedBatch.full || iPhoneFeedBatch.refreshing || event.touches.length !== 1 || !atBottom()) return;
-      if (!iPhoneFeedBatch.root.contains(event.target)) return;
-      if (event.target.closest('a, input, textarea, select, [contenteditable="true"], [role="dialog"], .Modal-wrapper, button:not(.jimi-feed-preview)')) return;
-      if (document.activeElement?.matches('input, textarea, [contenteditable="true"]')) return;
-      const height = window.visualViewport?.height || window.innerHeight;
-      const ratio = Math.max(.2, Math.min(.5, Number(IPHONE_PRESET.mobile.feedPullScreenRatio) || .33));
-      const damping = Math.max(.5, Math.min(1, Number(IPHONE_PRESET.mobile.feedPullDamping) || .6));
-      start = { x: event.touches[0].clientX, y: event.touches[0].clientY, threshold: height * ratio, damping };
-    }, { passive: true });
-    document.addEventListener("touchmove", (event) => {
-      if (!start) return;
-      if (event.touches.length !== 1 || !isIPhoneBatchPage() || !iPhoneFeedBatch.full) { reset(); return; }
-      const touch = event.touches[0];
-      const distance = start.y - touch.clientY;
-      if (distance < 0 || Math.abs(start.x - touch.clientX) > Math.max(24, distance)) { reset(); return; }
-      armed = isIPhoneBatchSwipe(start, touch);
-      moved ||= distance > 8;
-      if (distance > 0 && event.cancelable) event.preventDefault();
-      const resisted = distance * start.damping;
-      const pull = Math.min(resisted, start.threshold) + Math.min(Math.max(0, resisted - start.threshold) * .2, start.threshold * .25);
-      setIPhoneBatchPull(pull, true);
-      const text = armed ? "松开刷新 ↑" : "继续上拉 ↑";
-      if (iPhoneFeedBatch.footer.textContent !== text) iPhoneFeedBatch.footer.textContent = text;
-    }, { passive: false });
-    document.addEventListener("touchend", (event) => {
-      const refresh = armed && event.touches.length === 0;
-      if (moved && event.cancelable) event.preventDefault();
-      if (refresh) refreshIPhoneFeedBatch();
-      reset();
-    }, { passive: false });
-    document.addEventListener("touchcancel", reset, { passive: true });
-  };
-
   var iPhoneFeedAuthors = new Map();
   var cacheIPhoneFeedAuthors = (items) => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.compactFeed || !Array.isArray(items)) return;
