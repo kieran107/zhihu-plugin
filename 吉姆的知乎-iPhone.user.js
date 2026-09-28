@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.13
+// @version      5.21.4-iphone.14
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -51,7 +51,7 @@
       "fontSizeForList": "16",
       "fontSizeForAnswer": "18",
       "fontSizeForArticle": "18",
-      "fontSizeForListTitle": "18",
+      "fontSizeForListTitle": "19",
       "fontSizeForAnswerTitle": "22",
       "fontSizeForArticleTitle": "26",
       "contentLineHeight": "31",
@@ -486,11 +486,11 @@
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
       html.jim-iphone {
         color-scheme: light;
-        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed;
+        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
-        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333;
+        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424;
       }
       html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
@@ -550,16 +550,14 @@
       html.jim-iphone .jimi-batch-extra,
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
-      html.jim-iphone .jimi-iphone-collapse {
-        display: none; border: 1px solid #c9cdd4; background: #fffffff2; color: #175199;
-      }
+      html.jim-iphone .jimi-iphone-collapse { display: none; }
       html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
         display: block; position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
-        width: 68px; min-height: 44px; margin: 0 0 0 auto; padding: 0 10px;
-        border-radius: 22px;
-        box-shadow: 0 2px 8px #0002; font-size: 14px; line-height: 44px; cursor: pointer; touch-action: manipulation;
+        box-sizing: border-box; width: calc((100% - 18px) / 4); height: 44px;
+        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid var(--jimi-feed-line); border-radius: 14px;
+        background: var(--jimi-pill-bg); color: var(--jimi-feed-text); box-shadow: 0 1px 3px #0001;
+        font-size: 13px; line-height: 42px; cursor: pointer; touch-action: manipulation;
       }
-      html.jim-iphone[data-theme="dark"] .jimi-iphone-collapse { background: #242424f2; color: #adc9ed; border-color: #555; }
       html.jim-iphone .jimi-iphone-collapse:focus-visible { outline: 2px solid #0066ff; outline-offset: 2px; }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
         box-sizing: border-box; max-width: 100%; width: auto !important;
@@ -574,15 +572,32 @@
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :not(.jimi-answer-author):not(:has(.VoteButton)):not(:has(.Zi--Comment, .ZDI--ChatBubbleFill24)),
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions .VoteButton--down { display: none !important; }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions {
-        display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; width: 100% !important;
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+        width: 100% !important; padding: 12px 0 0 !important; margin: 0 !important; overflow: visible;
       }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.VoteButton) { order: 3; flex: 0 0 auto; }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.Zi--Comment, .ZDI--ChatBubbleFill24) { order: 2; flex: 0 0 auto; margin: 0; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed):not(:has(button[data-zop-retract-question="true"])) .ContentItem-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions + .Sticky--holder { display: none !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :is(.jimi-answer-author, :has(.VoteButton), :has(.Zi--Comment, .ZDI--ChatBubbleFill24)) {
+        grid-row: 1; box-sizing: border-box; min-width: 0; width: 100%; height: 44px; margin: 0 !important;
+        padding: 0 6px; border: 1px solid var(--jimi-feed-line); border-radius: 14px;
+        background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted); font-size: 12px;
+        overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.VoteButton) { grid-column: 3; padding: 0; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.Zi--Comment, .ZDI--ChatBubbleFill24) { grid-column: 2; }
+      html.jim-iphone .AnswerItem .ContentItem-actions > :has(.VoteButton) > span { display: block; height: 100%; }
+      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) {
+        box-sizing: border-box; width: 100%; height: 100%; min-height: 0 !important; margin: 0; padding: 0 6px;
+        border: 0; border-radius: 13px; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      }
+      html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton, button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)) svg { display: none; }
       html.jim-iphone .AnswerItem .ContentItem-actions > .jimi-answer-author {
-        order: 1; display: flex; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0;
-        min-height: 44px; margin: 0; color: var(--jimi-feed-muted) !important; font-size: 14px; text-decoration: none;
+        grid-column: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+        color: var(--jimi-feed-muted) !important; text-decoration: none;
       }
-      html.jim-iphone .jimi-answer-author img { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; object-fit: cover; }
+      html.jim-iphone .jimi-answer-author img { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; object-fit: cover; }
       html.jim-iphone .jimi-answer-author img[hidden] { display: none; }
       html.jim-iphone .jimi-answer-author span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       html.jim-iphone :is(.ContentItem-actions button, .TopstoryTabs a, .AppHeader button,
@@ -769,9 +784,18 @@
     event.preventDefault();
     event.stopImmediatePropagation();
   };
+  var iPhoneObservedAnswers = new WeakSet();
   var syncIPhoneExpandedAnswers = () => {
     if (!isIPhoneLayout) return;
     for (const rich of document.querySelectorAll('.AnswerItem > .RichContent:not(.is-collapsed)')) {
+      if (!iPhoneObservedAnswers.has(rich)) {
+        // 知乎滚动时会替换操作栏，页面高度未必变化；在重绘前补回作者与收起位置。
+        new MutationObserver(() => {
+          syncIPhoneExpandedAnswers();
+          syncIPhoneCollapseButtons();
+        }).observe(rich, { childList: true, subtree: true });
+        iPhoneObservedAnswers.add(rich);
+      }
       // 保留 React 管理的正文节点和图片查看器，只取消文字链接与划线入口。
       for (const text of rich.querySelectorAll('.RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])')) {
         if (text.hasAttribute("href")) text.removeAttribute("href");
@@ -809,22 +833,27 @@
   var syncIPhoneCollapseButtons = () => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.floatingCollapse) return;
     for (const content of document.querySelectorAll('.AnswerItem .RichContent:not(.is-collapsed)')) {
-      if (content.querySelector('.jimi-iphone-collapse') || !content.querySelector('button[data-zop-retract-question="true"]')) continue;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "jimi-iphone-collapse";
-      button.textContent = "收起 ↑";
-      button.setAttribute("aria-label", "收起当前回答");
-      // 始终找当前原生按钮，兼容知乎展开后替换 DOM；不手动改 React 的折叠状态。
-      button.onclick = () => {
-        const preview = content.closest('.jimi-feed-answer')?.querySelector('.jimi-feed-preview');
-        content.querySelector('button[data-zop-retract-question="true"]')?.click();
-        if (preview) requestAnimationFrame(() => { if (preview.getClientRects().length) preview.focus({ preventScroll: true }); });
-      };
-      // 收起仍在回答内悬浮，作者／评论／赞同保持在最后一行。
+      if (!content.querySelector('button[data-zop-retract-question="true"]')) continue;
       let footer = content.querySelector('.ContentItem-actions');
       while (footer && footer.parentElement !== content) footer = footer.parentElement;
-      content.insertBefore(button, footer || null);
+      if (!footer) continue;
+      let button = content.querySelector('.jimi-iphone-collapse');
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "jimi-iphone-collapse";
+        button.textContent = "收起 ↑";
+        button.setAttribute("aria-label", "收起当前回答");
+        // 始终找当前原生按钮，兼容知乎展开后替换 DOM；不手动改 React 的折叠状态。
+        button.onclick = () => {
+          const preview = content.closest('.jimi-feed-answer')?.querySelector('.jimi-feed-preview');
+          content.querySelector('button[data-zop-retract-question="true"]')?.click();
+          if (preview) requestAnimationFrame(() => { if (preview.getClientRects().length) preview.focus({ preventScroll: true }); });
+        };
+      }
+      // 与底栏第四格重叠，CSS sticky 在阅读时悬浮、到达底栏时自然归位。
+      // 原生 Sticky 可能重建底栏包装，仅重新定位我们自己的按钮。
+      if (footer.nextElementSibling !== button) footer.after(button);
     }
   };
 

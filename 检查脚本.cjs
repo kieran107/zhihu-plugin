@@ -100,13 +100,14 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(themeRoot['data-theme'], 'light');
   // New button must be unique, use the current native handler after a rerender,
   // and never appear on content without a native collapse operation.
-  let clicks = 0, added = [];
+  let clicks = 0, added = [], placements = 0;
   let nativeButton = { click: () => { throw new Error('Stale native button'); } };
   const content = {
     closest: () => null,
-    querySelector: selector => selector === '.jimi-iphone-collapse' ? added[0] : selector.includes('retract') ? nativeButton : null,
-    insertBefore: button => added.push(button)
+    querySelector: selector => selector === '.jimi-iphone-collapse' ? added[0] : selector.includes('retract') ? nativeButton : footer
   };
+  const newFooter = () => ({ parentElement: content, after(button) { this.nextElementSibling = button; placements++; if (!added.includes(button)) added.push(button); } });
+  let footer = newFooter();
   const documentMock = {
     querySelectorAll: () => [content, { querySelector: () => null }],
     createElement: () => ({ setAttribute() {} })
@@ -115,7 +116,14 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   phone.syncIPhoneCollapseButtons();
   phone.syncIPhoneCollapseButtons();
   assert.equal(added.length, 1);
+  assert.equal(placements, 1);
   assert.equal(added[0].type, 'button');
+  const wrapper = newFooter();
+  footer = { parentElement: wrapper }; // Native Sticky may insert a wrapper during scrolling.
+  phone.syncIPhoneCollapseButtons();
+  assert.equal(added.length, 1);
+  assert.equal(placements, 2);
+  assert.equal(wrapper.nextElementSibling, added[0]);
   nativeButton = { click: () => clicks++ };
   added[0].onclick();
   assert.equal(clicks, 1);
@@ -123,13 +131,13 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   load('Macintosh Safari', 0, 1440, 900, documentMock).syncIPhoneCollapseButtons();
   assert.equal(added.length, 0);
   // Expanded footer uses current author data without replacing native actions or duplicating itself.
-  let footerAuthor, authorCreates = 0;
+  let footerAuthor, authorCreates = 0, footerChanged, observedAnswers = 0;
   const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
   const avatar = { src: 'https://pic1.zhimg.com/avatar.jpg' };
   const answer = { querySelector: selector => selector.includes('name') ? profile : avatar, getAttribute: () => '{}' };
   const plainLink = { href: '/should-not-open', tabIndex: 0, hasAttribute() { return !!this.href; }, removeAttribute() { delete this.href; } };
   const nativeActions = { querySelector: () => footerAuthor, prepend: element => { footerAuthor = element; authorCreates++; } };
-  const rich = { querySelectorAll: () => [plainLink], querySelector: () => nativeActions, closest: () => answer };
+  const rich = { querySelectorAll: () => [plainLink], querySelector: selector => selector === '.ContentItem-actions' ? nativeActions : null, closest: () => answer };
   const footerAPI = load('iPhone Safari', 5, 402, 874, {
     querySelectorAll: () => [rich],
     createElement: () => {
@@ -137,9 +145,13 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
       return { dataset: {}, querySelector: selector => selector === 'img' ? img : label,
         setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; } };
     }
-  });
+  }, { MutationObserver: class {
+    constructor(callback) { footerChanged = callback; }
+    observe(target) { assert.equal(target, rich); observedAnswers++; }
+  } });
   footerAPI.syncIPhoneExpandedAnswers();
   footerAPI.syncIPhoneExpandedAnswers();
+  assert.equal(observedAnswers, 1);
   assert.equal(authorCreates, 1);
   assert.equal(footerAuthor.querySelector('span').textContent, '作者甲');
   assert.equal(footerAuthor.querySelector('img').src, avatar.src);
@@ -157,6 +169,11 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   profile.textContent = '作者乙';
   footerAPI.syncIPhoneExpandedAnswers();
   assert.equal(authorCreates, 1);
+  assert.equal(footerAuthor.querySelector('span').textContent, '作者乙');
+  footerAuthor = undefined; // A native action-bar replacement must restore the author without a resize.
+  footerChanged();
+  assert.equal(authorCreates, 2);
+  assert.equal(observedAnswers, 1);
   assert.equal(footerAuthor.querySelector('span').textContent, '作者乙');
   for (const [text, media, blocked] of [[true, false, true], [true, true, false], [false, false, false]]) {
     let prevented = false, stopped = false;
