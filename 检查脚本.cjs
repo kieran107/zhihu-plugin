@@ -42,7 +42,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, blockIPhoneAnswerTextClick, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -178,11 +178,34 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   for (const [text, media, blocked] of [[true, false, true], [true, true, false], [false, false, false]]) {
     let prevented = false, stopped = false;
     footerAPI.blockIPhoneAnswerTextClick({
-      target: { closest: selector => selector.startsWith('img') ? media : text },
+      target: { closest: selector => selector.startsWith('.RichContent-inner') ? null : selector.startsWith('img') ? media : text },
       preventDefault: () => { prevented = true; }, stopImmediatePropagation: () => { stopped = true; }
     });
     assert.equal(prevented, blocked);
     assert.equal(stopped, blocked);
+  }
+  // Read the original URL at click time, including lazy images; never open two viewers or hijack GIF playback.
+  let original = 'https://pic1.zhimg.com/image_r.jpg', gif = false, opened;
+  const previewImage = {
+    src: 'data:image/svg+xml,placeholder', currentSrc: 'data:image/svg+xml,placeholder', style: {},
+    getAttribute: key => key === 'data-original' ? original : 'https://pic1.zhimg.com/image_720w.jpg',
+    closest: () => gif
+  };
+  assert.equal(api.getPreviewImageSrc(previewImage), original);
+  original = '';
+  assert.equal(api.getPreviewImageSrc(previewImage), 'https://pic1.zhimg.com/image_720w.jpg');
+  original = 'https://pic1.zhimg.com/loaded_r.jpg';
+  footerAPI.myPreview.open = src => { opened = src; };
+  for (const isGif of [false, true]) {
+    gif = isGif; opened = undefined;
+    let prevented = false, stopped = false;
+    footerAPI.blockIPhoneAnswerTextClick({
+      target: { closest: selector => selector.startsWith('.RichContent-inner') ? previewImage : true },
+      preventDefault: () => { prevented = true; }, stopImmediatePropagation: () => { stopped = true; }
+    });
+    assert.equal(opened, gif ? undefined : original);
+    assert.equal(prevented, !gif);
+    assert.equal(stopped, !gif);
   }
   assert.equal(api.formatIPhoneFeedVotes(3035), '3035 人赞同');
   assert.equal(api.formatIPhoneFeedVotes(123456), '123456 人赞同');
@@ -275,5 +298,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer and plain-text click protection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });

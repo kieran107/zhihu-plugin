@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.15
+// @version      5.21.4-iphone.16
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -52,7 +52,7 @@
       "fontSizeForList": "16",
       "fontSizeForAnswer": "18",
       "fontSizeForArticle": "18",
-      "fontSizeForListTitle": "19",
+      "fontSizeForListTitle": "20",
       "fontSizeForAnswerTitle": "22",
       "fontSizeForArticleTitle": "26",
       "contentLineHeight": "31",
@@ -670,8 +670,35 @@
         background: var(--jimi-feed-bg) !important; padding: 8px 0 !important; border: 0 !important;
       }
       html.jim-iphone[data-theme] .css-kt4t4n .css-1503iqi { color: var(--jimi-feed-muted) !important; font-size: 13px; }
+      /* 复用原生收起评论按钮，悬浮范围限制在当前评论区。 */
+      html.jimi-readonly-comments[data-theme] .css-kt4t4n {
+        position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 4;
+        width: 104px !important; height: 44px; margin: 8px 0 0 auto !important; padding: 0 !important;
+        background: transparent !important;
+      }
+      html.jimi-readonly-comments .css-kt4t4n .css-p1wstz {
+        position: static !important; display: block !important; opacity: 1 !important;
+        width: 100% !important; height: 44px; margin: 0 !important; transform: none !important;
+      }
+      html.jimi-readonly-comments[data-theme] .css-kt4t4n .css-1503iqi {
+        position: static !important; display: flex; align-items: center; justify-content: center; gap: 4px;
+        box-sizing: border-box; width: 100%; height: 44px; margin: 0; padding: 0 8px;
+        border: 1px solid #fff !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
+        color: var(--jimi-feed-text) !important; font-size: 13px; touch-action: manipulation;
+      }
+      html.jimi-readonly-comments .css-1503iqi svg { fill: currentColor !important; }
+      html.jimi-readonly-comments .css-79elbk:has(> .css-u76jt1) > .css-l8iyjs { display: none !important; }
+      html.jimi-readonly-comments[data-theme] .css-1aq8hf9 > button[aria-label="关闭"] {
+        top: auto; right: 12px; bottom: 12px; width: 104px; height: 44px; padding: 0 8px;
+        border: 1px solid #fff !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
+        color: var(--jimi-feed-text) !important; font-size: 13px; touch-action: manipulation;
+      }
+      html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"] svg { display: none; }
+      html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
+      html.jimi-readonly-comments .css-1aq8hf9 :is(.css-18ld3w0, .css-16zdamy) { padding-bottom: 64px !important; }
       html.jim-iphone .jimi-message { max-width: calc(100vw - 24px); height: auto; min-height: 44px; padding: 8px; box-sizing: border-box; }
-      html.jim-iphone .jimi-preview img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+      html.jim-iphone #JIMI_PREVIEW_IMAGE { background: rgba(0, 0, 0, .94); }
+      html.jim-iphone .jimi-preview img { width: auto; height: auto; max-width: 100%; max-height: 90vh; max-height: 90dvh; object-fit: contain; }
       html.jim-iphone .jimi-preview video { max-width: 100%; max-height: 90vh; }
       html.jim-iphone .Post-content :is(.css-kjzwqj, .css-c0fani, .css-yq5nsh) {
         width: 100% !important; max-width: 100%; min-width: 0; display: block !important;
@@ -837,6 +864,14 @@
 
   var blockIPhoneAnswerTextClick = (event) => {
     const target = event.target;
+    const image = target.closest?.('.RichContent-inner .RichText img:is(.origin_image, .content_image), .Post-RichTextContainer img:is(.origin_image, .content_image)');
+    if (image && !image.closest('.GifPlayer')) {
+      // 原生大图层把 62px 小图做 GPU 放大，Safari 会模糊；复用现有预览层按实际尺寸排版原图。
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      myPreview.open(getPreviewImageSrc(image));
+      return;
+    }
     if (target.closest?.('img, video, audio, .VideoAnswerPlayer, .VideoCard')) return;
     if (!target.closest?.('.AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])')) return;
     event.preventDefault();
@@ -1060,6 +1095,12 @@
     idImg: "JIMI_PREVIEW_IMAGE",
     idVideo: "JIMI_PREVIEW_VIDEO"
   };
+  var getPreviewImageSrc = (image) => {
+    // 点击时再取地址，避免缓存懒加载占位图；不拼接或猜测 CDN 原图地址。
+    const sources = [image.getAttribute("data-original"), image.currentSrc, image.src, image.getAttribute("data-actualsrc")];
+    return sources.find((src) => /^(https?:)?\/\//.test(src || "")) || image.src ||
+      image.style.backgroundImage?.match(/url\(["']?(.+?)["']?\)/)?.[1] || "";
+  };
   var initImagePreview = async () => {
     const { zoomImageType } = await myStorage.getConfig();
     const images = [domA(".TitleImage:not(.jimi-processed)"), domA(".ArticleItem-image:not(.jimi-processed)"), domA(".ztext figure .content_image:not(.jimi-processed)")];
@@ -1068,8 +1109,7 @@
       for (let index2 = 0, len = ev.length; index2 < len; index2++) {
         const nodeItem = ev[index2];
         nodeItem.classList.add("jimi-processed");
-        const src = nodeItem.src || nodeItem.style.backgroundImage && nodeItem.style.backgroundImage.split('("')[1].split('")')[0];
-        nodeItem.onclick = () => myPreview.open(src);
+        nodeItem.onclick = () => myPreview.open(getPreviewImageSrc(nodeItem));
       }
     }
     if (zoomImageType === "2" /* 自定义尺寸 */) {
@@ -6263,6 +6303,8 @@
       const config = await myStorage.getConfig();
       const { keyEscCloseCommentDialog } = config;
       if (event.key === "Escape") {
+        const preview = [myPreview.idImg, myPreview.idVideo].map(domById).find((node) => node?.style.display === "block");
+        if (preview) { myPreview.hide(preview); return; }
         if (domById(ID_EXTRA_DIALOG)?.dataset.status === "open") closeExtra();
         keyEscCloseCommentDialog && closeCommentDialog();
       }
