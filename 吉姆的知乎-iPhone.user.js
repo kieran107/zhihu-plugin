@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.4
+// @version      5.21.4-iphone.5
 // @description  基于知乎修改器 5.21.4，适配 iPhone Safari 请求桌面网站。单栏阅读、代码预设、无设置面板。参数见同目录「iPhone知乎-参数.md」。
 // @compatible   edge Violentmonkey
 // @compatible   edge Tampermonkey
@@ -34,6 +34,7 @@
       "hideSidebars": true,
       "hideOpenApp": true,
       "listImageMaxLines": 2,
+      "answerImageMaxLines": 2,
       "floatingCollapse": true,
       "compactFeed": true,
       "feedSummaryLines": 1
@@ -354,6 +355,7 @@
     });
     const { pagePadding, hideSidebars, hideOpenApp, openInternalLinksInSameTab } = IPHONE_PRESET.mobile;
     const listImageHeight = (Number(IPHONE_PRESET.script.fontSizeForList) || 17) * 1.67 * IPHONE_PRESET.mobile.listImageMaxLines;
+    const answerImageHeight = (Number(IPHONE_PRESET.script.contentLineHeight) || 31) * IPHONE_PRESET.mobile.answerImageMaxLines;
     fnAppendStyle("JIMI_IPHONE_STYLE", `
       html.jim-iphone { min-width: 0 !important; -webkit-text-size-adjust: 100%; }
       html.jim-iphone body { min-width: 0 !important; margin: 0; width: 100%; }
@@ -393,7 +395,7 @@
         display: block; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain;
       }
       html.jim-iphone .TitleImage { max-width: 100% !important; height: auto !important; }
-      /* 列表摘要沿用知乎 1.67 倍行高；只缩预览图，展开后的正文图片保持原尺寸。 */
+      /* 列表图与展开正文分别按行高限高；查看大图的浮层不受影响。 */
       html.jim-iphone .RichContent-cover { width: 90px; max-width: 30%; margin-left: 10px; }
       html.jim-iphone :is(.RichContent-cover, .HotItem-img) {
         height: ${listImageHeight}px !important; max-height: ${listImageHeight}px !important;
@@ -406,6 +408,11 @@
       html.jim-iphone .RichContent.is-collapsed .RichContent-inner :is(figure, .Image-Wrapper-Preview, img:not(.Avatar)) {
         height: auto !important; max-height: ${listImageHeight}px !important;
         min-height: 0 !important; width: auto !important; object-fit: contain;
+      }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichText :is(img:not(.Avatar), .Image-Wrapper-Preview, .RichText-ConditionalImagePortal, .GifPlayer) {
+        height: auto !important; max-height: ${answerImageHeight}px !important;
+        min-height: 0 !important; width: auto !important; max-width: 100% !important;
+        padding-top: 0 !important; padding-bottom: 0 !important; aspect-ratio: auto !important; object-fit: contain;
       }
       html.jim-iphone .HotItem { padding: 14px ${pagePadding}px !important; min-height: 0; height: auto; align-items: flex-start; gap: 8px; }
       html.jim-iphone .HotItem-index { position: static; flex: 0 0 22px; width: 22px; }
@@ -519,6 +526,9 @@
       html.jim-iphone .ContentItem-actions.is-fixed {
         position: static !important; transform: none !important; box-shadow: none !important;
       }
+      /* 保留原生赞同、评论；原生收起只隐藏，供回答内的悬浮按钮调用。 */
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :not(:has(.VoteButton)):not(:has(.Zi--Comment, .ZDI--ChatBubbleFill24)),
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions .VoteButton--down { display: none !important; }
       html.jim-iphone :is(.ContentItem-actions button, .TopstoryTabs a, .AppHeader button,
         .Modal-closeButton, .jimi-button) { min-height: 44px; touch-action: manipulation; }
       html.jim-iphone :is(input, textarea, [contenteditable="true"]) { font-size: 16px !important; }
@@ -579,8 +589,47 @@
     [votes, "赞同"], [comments, "评论"]
   ].filter(([value]) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0)
     .map(([value, label]) => `${Number(value).toLocaleString("zh-CN")} ${label}`).join(" · ");
+  var iPhoneAvatarObserver;
+  var iPhoneAvatarTargets = new Set();
+  var loadIPhoneFeedAvatar = async (content) => {
+    if (!content.isConnected || content.dataset.avatarRequested) return;
+    const id = String(parseJSONAttr(content.getAttribute("data-zop"))?.itemId || "");
+    const member = parseJSONAttr(content.getAttribute("data-za-extra-module"))?.card?.content?.author_member_hash_id;
+    if (!id || typeof member !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(member)) return;
+    content.dataset.avatarRequested = "true";
+    const cached = iPhoneFeedAuthors.get(id);
+    if (cached?.avatar_url || cached?.avatarUrl) return;
+    try {
+      // 首屏数据或 Safari 沙箱可能漏过 fetch 拦截；只在条目接近可见区域时补取作者。
+      const response = await fetch(`/api/v4/members/${encodeURIComponent(member)}?include=avatar_url`, { credentials: "same-origin" });
+      if (!response.ok) return;
+      const author = await response.json();
+      cacheIPhoneFeedAuthors([{ target: { type: "answer", id, author } }]);
+      syncIPhoneFeed();
+    } catch {
+      // 网络失败时保留作者文字；同一卡片不循环重试。
+    }
+  };
+  var observeIPhoneFeedAvatar = (content) => {
+    if (content.dataset.avatarRequested) return;
+    if (!iPhoneAvatarObserver) iPhoneAvatarObserver = new IntersectionObserver((entries) => {
+      for (const { target, isIntersecting } of entries) {
+        if (!isIntersecting) continue;
+        iPhoneAvatarObserver.unobserve(target);
+        iPhoneAvatarTargets.delete(target);
+        loadIPhoneFeedAvatar(target);
+      }
+    }, { rootMargin: "300px" });
+    iPhoneAvatarObserver.observe(content);
+    iPhoneAvatarTargets.add(content);
+  };
   var syncIPhoneFeed = () => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.compactFeed) return;
+    for (const target of iPhoneAvatarTargets) {
+      if (target.isConnected) continue;
+      iPhoneAvatarObserver.unobserve(target);
+      iPhoneAvatarTargets.delete(target);
+    }
     for (const content of document.querySelectorAll('.TopstoryItem .AnswerItem')) {
       const rich = content.querySelector(':scope > .RichContent');
       if (!rich?.classList.contains("is-collapsed") || !rich.querySelector('.ContentItem-more')) continue;
@@ -593,7 +642,7 @@
       let excerpt = content.querySelector('.RichContent-inner .RichText')?.textContent.replace(/\s+/g, " ").trim() || "";
       if (authorName && (excerpt.startsWith(authorName + "：") || excerpt.startsWith(authorName + ":"))) excerpt = excerpt.slice(authorName.length + 1).trim();
       const counts = formatIPhoneFeedCounts(card.upvote_num, card.comment_num);
-      const avatar = author.avatar_url || author.avatarUrl || "";
+      const avatar = author.avatar_url || author.avatarUrl || content.querySelector('.AuthorInfo-avatar')?.src || "";
       let preview = content.querySelector(':scope > .jimi-feed-preview');
       if (!preview) {
         preview = document.createElement("button");
@@ -614,11 +663,16 @@
         preview.querySelector('.jimi-feed-counts').textContent = (authorName && counts ? "· " : "") + counts;
         const image = preview.querySelector('img');
         image.hidden = !/^https:\/\//.test(avatar);
+        image.onerror = () => {
+          image.hidden = true;
+          iPhoneFeedAuthors.delete(String(zop.itemId));
+          observeIPhoneFeedAvatar(content);
+        };
         if (!image.hidden && image.getAttribute("src") !== avatar) image.src = avatar;
-        image.onerror = () => { image.hidden = true; };
       }
       content.classList.add("jimi-feed-answer");
       content.closest('.TopstoryItem').classList.add("jimi-feed-item");
+      if (!avatar) observeIPhoneFeedAvatar(content);
     }
   };
 
@@ -5825,8 +5879,9 @@
       if (fetchInterceptStatus) {
         fnLog("已开启接口拦截");
         const prevHeaders = getFetchHeaders();
-        const originFetch = fetch;
-        const myWindow = isSafari ? window : unsafeWindow;
+        // Safari Tampermonkey 同样需要拦截页面窗口，而非脚本沙箱的 window。
+        const myWindow = typeof unsafeWindow === "undefined" ? window : unsafeWindow;
+        const originFetch = myWindow.fetch.bind(myWindow);
         myWindow.fetch = (url, opt) => {
           if (opt && opt.headers) {
             setFetchHeaders({
@@ -5880,6 +5935,7 @@
           try {
             const prevAnswers = JsData.initialState.entities.answers;
             const answerTargets = Object.values(prevAnswers);
+            cacheIPhoneFeedAuthors(answerTargets.map((target) => ({ target })));
             answerTargets.length && findRemoveAnswers(answerTargets);
           } catch {
           }
