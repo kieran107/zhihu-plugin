@@ -299,7 +299,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   await failedAPI.loadIPhoneFeedAvatar(failed);
   assert.equal(requests, 2);
   assert.equal(failedAPI.iPhoneFeedAuthors.size, 0);
-  // Count filtered, visible rows rather than raw API rows; overflow never replaces the first 12.
+  // Count filtered, visible rows rather than raw API rows; overflow never replaces the first 10.
   const makeClasses = (names = []) => {
     const values = new Set(names);
     return { contains: name => values.has(name), remove: name => values.delete(name), toggle: (name, yes) => yes ? values.add(name) : values.delete(name) };
@@ -314,10 +314,10 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   }, { location, URL, getComputedStyle: () => ({ display: 'block' }) });
   batchAPI.syncIPhoneFeedBatch();
   batchAPI.syncIPhoneFeedBatch();
-  assert.equal(preset.mobile.feedBatchSize, 12);
-  assert.equal(batchAPI.iPhoneFeedBatch.count, 12);
+  assert.equal(preset.mobile.feedBatchSize, 10);
+  assert.equal(batchAPI.iPhoneFeedBatch.count, 10);
   assert.equal(batchAPI.iPhoneFeedBatch.full, true);
-  assert.equal(rows.filter(row => row.classList.contains('jimi-batch-extra')).length, 10);
+  assert.equal(rows.filter(row => row.classList.contains('jimi-batch-extra')).length, 12);
   assert.doesNotMatch(source, /feedPullScreenRatio|feedPullDamping|setIPhoneBatchPull|refreshIPhoneFeedBatch|isIPhoneBatchSwipe|initIPhoneFeedBatch|jimi-batch-footer|jimIPhoneBatchRefresh/);
   const nextFeed = 'https://www.zhihu.com/api/v3/feed/topstory/recommend?action=down';
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), true);
@@ -355,5 +355,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 12-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });
