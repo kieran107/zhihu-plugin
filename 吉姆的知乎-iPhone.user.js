@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.6
+// @version      1.7
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -518,6 +518,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-comment-liked: #b95763;
         --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-dot: #8b94a03d;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
+        --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
@@ -525,6 +526,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-comment-liked: #e79aa4;
         --jimi-feed-canvas: #101113; --jimi-canvas-dot: #aab4c526;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
+        --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
       html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
@@ -557,13 +559,21 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         padding: 12px max(15px, calc(env(safe-area-inset-left) - 12px)) 12px max(15px, calc(env(safe-area-inset-right) - 12px)) !important;
         border: 0 !important;
         border-radius: 18px !important; box-shadow: var(--jimi-card-shadow) !important; background: var(--jimi-feed-bg) !important;
-        overflow: visible !important; transition: transform 200ms cubic-bezier(.2, .8, .2, 1);
+        position: relative; overflow: visible !important; transition: transform 520ms cubic-bezier(.4, 0, .2, 1);
       }
+      /* 阴影形状保持不变，只渐变透明度，避免逐帧插值长卡片的模糊阴影。 */
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after {
+        content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+        box-shadow: var(--jimi-card-focus-shadow); opacity: 0;
+        transition: opacity 520ms cubic-bezier(.4, 0, .2, 1);
+      }
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed))::after { opacity: 1; }
       /* 用前后卡片位移拉开视觉间距，不逐帧改变长回答高度或外边距。 */
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-12px); }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(12px); }
       @media (prefers-reduced-motion: reduce) {
-        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) { transition: none; }
+        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem),
+        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after { transition: none; }
       }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
       html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
