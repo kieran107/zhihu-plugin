@@ -1,20 +1,15 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.20
+// @version      6.0.0
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
+// @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
-// @description  基于知乎修改器 5.21.4，适配 iPhone Safari 请求桌面网站。单栏阅读、代码预设、无设置面板。参数见同目录「iPhone知乎-参数.md」。
-// @compatible   edge Violentmonkey
-// @compatible   edge Tampermonkey
-// @compatible   chrome Violentmonkey
-// @compatible   chrome Tampermonkey
-// @compatible   firefox Violentmonkey
-// @compatible   firefox Tampermonkey
-// @compatible   safari Violentmonkey
+// @description  面向 iPhone Safari 桌面网站的知乎阅读脚本：12 条推荐、两行摘要、单篇展开、原图预览、纯观看评论与系统深色模式，无设置弹窗。
+// @description:en Zhihu reading layout for iPhone Safari in desktop website mode: 12-item feed, focused answers, original images, read-only comments and system theme.
 // @compatible   safari Tampermonkey
-// @author       lyb233（原作）；Jim（个人适配）
+// @author       Jim (kieran107); upstream: lyb233 / liuyubing
 // @license      MIT
 // @match        *://*.zhihu.com/*
 // @grant        unsafeWindow

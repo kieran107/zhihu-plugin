@@ -7,7 +7,7 @@ const META = '吉姆的知乎-iPhone.meta.js';
 const PARAMS = 'iPhone知乎-参数.md';
 const REPO = 'https://github.com/kieran107/zhihu-plugin';
 const RAW = 'https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/';
-const FILES = [SCRIPT, META, PARAMS, '检查脚本.cjs', '发布更新.cjs', '一键发布.command', 'README.md', 'AGENTS.md', '.gitignore'];
+const FILES = [SCRIPT, META, PARAMS, '检查脚本.cjs', '发布更新.cjs', '一键发布.command', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/DEVELOPMENT.md', 'docs/GREASYFORK.md', 'AGENTS.md', '.gitignore'];
 const header = source => source.match(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==/)[0] + '\n';
 const version = source => source.match(/^\/\/ @version\s+(\S+)/m)[1];
 
@@ -17,15 +17,18 @@ function prepare(source, markdown, remoteSource) {
   source = source.replace(/const IPHONE_PRESET = [\s\S]*?;\n  \/\/ END IPHONE_PRESET/,
     `const IPHONE_PRESET = ${JSON.stringify(preset, null, 2).replace(/\n/g, '\n  ')};\n  // END IPHONE_PRESET`);
   let next = version(source);
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(next)) throw new Error('版本号须使用 X.Y.Z，例如 6.0.0。');
   if (source !== remoteSource) {
-    const local = next.match(/^(\d+\.\d+\.\d+-iphone\.)(\d+)$/);
-    const remote = version(remoteSource).match(/^(\d+\.\d+\.\d+-iphone\.)(\d+)$/);
-    if (!local || !remote || local[1] !== remote[1]) throw new Error('上游基础版本发生变化，请先核对版本规则再发布。');
-    next = local[1] + Math.max(Number(local[2]), Number(remote[2]) + 1);
+    const remoteVersion = version(remoteSource);
+    const remote = remoteVersion.match(/^(\d+)\.(\d+)\.(\d+)(-iphone\.\d+)?$/);
+    if (!remote) throw new Error('无法识别远端版本，请先核对。');
+    const local = next.split('.').map(Number);
+    const difference = local.map((n, i) => n - Number(remote[i + 1])).find(n => n !== 0) || 0;
+    if (difference < 0 || (remote[4] && difference === 0)) throw new Error('版本号不能降低；旧 iphone.N 版本须迁移到更高的 X.Y.Z。');
+    if (difference === 0) next = `${local[0]}.${local[1]}.${local[2] + 1}`;
     source = source.replace(/^(\/\/ @version\s+)\S+/m, `$1${next}`);
   }
-  markdown = markdown.replace(/个人版版本：`[^`]+`/, `个人版版本：\`${next}\``)
-    .replace(/当前版本为 `iphone\.\d+`/, `当前版本为 \`iphone.${next.split('.').at(-1)}\``);
+  markdown = markdown.replace(/当前版本：`[^`]+`/, `当前版本：\`${next}\``);
   return { source, markdown, meta: header(source), version: next };
 }
 
@@ -54,7 +57,7 @@ async function publish() {
   git('add', '--', ...FILES);
   git('diff', '--cached', '--check');
   if (git('diff', '--cached', '--name-only')) {
-    execFileSync('git', ['commit', '-m', `Publish ${prepared.version} and sync workflow`], { stdio: 'inherit' });
+    execFileSync('git', ['commit', '-m', `chore(release): v${prepared.version}`], { stdio: 'inherit' });
   }
   execFileSync('git', ['push', 'origin', 'HEAD:main'], { stdio: 'inherit', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
   const sha = git('rev-parse', 'HEAD');

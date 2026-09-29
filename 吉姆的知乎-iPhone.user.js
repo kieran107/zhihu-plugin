@@ -1,20 +1,15 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.20
+// @version      6.0.0
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
+// @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
-// @description  基于知乎修改器 5.21.4，适配 iPhone Safari 请求桌面网站。单栏阅读、代码预设、无设置面板。参数见同目录「iPhone知乎-参数.md」。
-// @compatible   edge Violentmonkey
-// @compatible   edge Tampermonkey
-// @compatible   chrome Violentmonkey
-// @compatible   chrome Tampermonkey
-// @compatible   firefox Violentmonkey
-// @compatible   firefox Tampermonkey
-// @compatible   safari Violentmonkey
+// @description  面向 iPhone Safari 桌面网站的知乎阅读脚本：12 条推荐、两行摘要、单篇展开、原图预览、纯观看评论与系统深色模式，无设置弹窗。
+// @description:en Zhihu reading layout for iPhone Safari in desktop website mode: 12-item feed, focused answers, original images, read-only comments and system theme.
 // @compatible   safari Tampermonkey
-// @author       lyb233（原作）；Jim（个人适配）
+// @author       Jim (kieran107); upstream: lyb233 / liuyubing
 // @license      MIT
 // @match        *://*.zhihu.com/*
 // @grant        unsafeWindow
@@ -25,9 +20,38 @@
 // @run-at       document-start
 // ==/UserScript==
 
+/*
+MIT License
+
+Copyright (c) lyb233 / liuyubing (upstream Zhihu Custom authors)
+Copyright (c) 2026 Jim (kieran107) and contributors (iPhone adaptation)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Upstream: https://github.com/liuyubing233/zhihu-custom (5.21.4)
+Reference: https://github.com/liuyubing233/zhihu-custom-mobile (2.9.4)
+Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THIRD_PARTY_NOTICES.md
+*/
+
 "use strict";
 (() => {
-  // 唯一的个人参数入口。修改 Markdown 后，由 Codex 同步到此处。
+  // 预设来源：iPhone知乎-参数.md。由 发布更新.cjs 同步，请勿只改此处。
   // BEGIN IPHONE_PRESET
   const IPHONE_PRESET = {
     "mobile": {
@@ -41,7 +65,7 @@
       "floatingCollapse": true,
       "readOnlyComments": true,
       "compactFeed": true,
-      "feedBatchSize": 10,
+      "feedBatchSize": 12,
       "feedSummaryLines": 2
     },
     "script": {
