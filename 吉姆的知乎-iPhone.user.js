@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.5
+// @version      1.6
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -516,19 +516,19 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
-        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-dot: #8b94a02e;
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-dot: #8b94a03d;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
-        --jimi-feed-canvas: #101113; --jimi-canvas-dot: #aab4c51c;
+        --jimi-feed-canvas: #101113; --jimi-canvas-dot: #aab4c526;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
       }
       html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
-      /* 固定纹理位于卡片下方；不监听滚动、不移动正文，也不拦截触摸。 */
+      /* 固定纹理位于卡片下方；不监听滚动，也不拦截触摸。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
         background: radial-gradient(circle, var(--jimi-canvas-dot) .7px, transparent .9px) 0 0 / 14px 14px var(--jimi-page-bg);
@@ -557,7 +557,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         padding: 12px max(15px, calc(env(safe-area-inset-left) - 12px)) 12px max(15px, calc(env(safe-area-inset-right) - 12px)) !important;
         border: 0 !important;
         border-radius: 18px !important; box-shadow: var(--jimi-card-shadow) !important; background: var(--jimi-feed-bg) !important;
-        overflow: visible !important;
+        overflow: visible !important; transition: transform 200ms cubic-bezier(.2, .8, .2, 1);
+      }
+      /* 用前后卡片位移拉开视觉间距，不逐帧改变长回答高度或外边距。 */
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-12px); }
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(12px); }
+      @media (prefers-reduced-motion: reduce) {
+        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) { transition: none; }
       }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
       html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
