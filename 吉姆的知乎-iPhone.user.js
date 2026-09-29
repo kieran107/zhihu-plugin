@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.2
+// @version      1.3
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -526,6 +526,18 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory-container { margin-top: 0 !important; padding-top: 12px !important; }
+      html.jim-iphone.jimi-compact-feed .Topstory-container:has(.Topstory-recommend) { padding-top: 0 !important; }
+      html.jimi-compact-feed :is(.jimi-feed-intro, .jimi-feed-outro) {
+        box-sizing: border-box; background: var(--jimi-page-bg); text-align: center;
+        color: var(--jimi-feed-muted); padding: 20px 27px; margin: 0;
+        display: none; align-items: center; justify-content: center;
+      }
+      html.jimi-compact-feed .jimi-feed-intro:has(+ .Topstory-recommend) { display: flex; flex-direction: column; height: 240px; }
+      html.jimi-compact-feed .jimi-feed-refresh-hint { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; line-height: 20px; }
+      html.jimi-compact-feed .jimi-feed-refresh-hint span { font-size: 20px; }
+      html.jimi-compact-feed .jimi-feed-brand { margin: auto 0 6px; color: var(--jimi-feed-text); font-size: 32px; line-height: 1.3; font-weight: 650; letter-spacing: 1px; }
+      html.jimi-compact-feed .jimi-feed-tagline { margin: 0 0 auto; font-size: 13px; line-height: 20px; }
+      html.jimi-compact-feed .Topstory-recommend.jimi-batch-full + .jimi-feed-outro { display: flex; height: 120px; font-size: 13px; line-height: 20px; letter-spacing: 1px; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) {
         margin: 0 12px 12px !important;
         padding: 12px max(15px, calc(env(safe-area-inset-left) - 12px)) 12px max(15px, calc(env(safe-area-inset-right) - 12px)) !important;
@@ -855,6 +867,19 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   };
   var syncIPhoneFeed = () => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.compactFeed) return;
+    const root = document.querySelector('.Topstory-recommend');
+    if (root && !root.previousElementSibling?.classList.contains('jimi-feed-intro')) {
+      const intro = document.createElement('header');
+      intro.className = 'jimi-feed-intro';
+      intro.innerHTML = '<p class="jimi-feed-refresh-hint"><span aria-hidden="true">↑</span>上拉刷新</p><h1 class="jimi-feed-brand">吉姆的知乎</h1><p class="jimi-feed-tagline">安静地读知乎</p>';
+      root.before(intro);
+    }
+    if (root && !root.nextElementSibling?.classList.contains('jimi-feed-outro')) {
+      const outro = document.createElement('footer');
+      outro.className = 'jimi-feed-outro';
+      outro.textContent = '已到底部了';
+      root.after(outro);
+    }
     for (const target of iPhoneAvatarTargets) {
       if (target.isConnected) continue;
       iPhoneAvatarObserver.unobserve(target);
