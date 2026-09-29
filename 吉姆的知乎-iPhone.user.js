@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.18
+// @version      5.21.4-iphone.19
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -339,6 +339,7 @@
   var initIPhoneLayout = () => {
     if (!isIPhoneLayout) return;
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
+    window.addEventListener("click", trackIPhoneCommentAnswer, true);
     document.documentElement.classList.add("jim-iphone");
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
     document.documentElement.classList.toggle("jimi-readonly-comments", IPHONE_PRESET.mobile.readOnlyComments);
@@ -488,7 +489,7 @@
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
       html.jim-iphone {
         color-scheme: light;
-        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #44474c;
+        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
@@ -501,6 +502,7 @@
         border-radius: 0 !important; box-shadow: none !important; background: var(--jimi-feed-bg) !important;
       }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 12px; border-bottom: 1px solid var(--jimi-feed-line); }
+      html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
       html.jimi-compact-feed .jimi-feed-item :is(.FeedSource, .TopstoryItem-topic) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > :is(.ContentItem-title, .AnswerItem-authorInfo, .RichContent) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-preview { display: none; }
@@ -887,15 +889,59 @@
     event.stopImmediatePropagation();
   };
   var iPhoneObservedAnswers = new WeakSet();
+  var iPhoneOpenAnswers = new Set();
+  var iPhoneActiveAnswer;
+  var iPhoneCommentAnswer;
+  var trackIPhoneCommentAnswer = (event) => {
+    const button = event.target.closest?.('.ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24), .css-7dh30y');
+    if (!button || button.closest('.css-1aq8hf9')) return;
+    iPhoneCommentAnswer = button.closest('.AnswerItem')?.querySelector(':scope > .RichContent');
+  };
+  var closeIPhoneAnswerComments = (rich) => {
+    rich.closest('.AnswerItem')?.querySelector('.css-1503iqi')?.click();
+    if (iPhoneCommentAnswer === rich) closeCommentDialog();
+  };
+  var collapseIPhoneAnswer = (rich) => {
+    closeIPhoneAnswerComments(rich);
+    rich.querySelector('button[data-zop-retract-question="true"]')?.click();
+  };
+  var syncIPhoneAnswerFocus = () => {
+    if (!isIPhoneLayout) return;
+    // 仅协调原生可展开／收起的回答，不把详情页本来就完整显示的短回答强制裁断。
+    const open = new Set([...document.querySelectorAll('.AnswerItem > .RichContent:not(.is-collapsed)')]
+      .filter(rich => rich.querySelector('button[data-zop-retract-question="true"]') && rich.getClientRects().length));
+    const fresh = [...open].filter(rich => !iPhoneOpenAnswers.has(rich));
+    const active = (iPhoneActiveAnswer ? fresh.at(-1) : fresh[0]) || (open.has(iPhoneActiveAnswer) ? iPhoneActiveAnswer : open.values().next().value);
+    for (const rich of iPhoneOpenAnswers) if (!open.has(rich)) closeIPhoneAnswerComments(rich);
+    if (iPhoneCommentAnswer && (!iPhoneCommentAnswer.isConnected || iPhoneCommentAnswer.classList.contains('is-collapsed'))) {
+      closeIPhoneAnswerComments(iPhoneCommentAnswer);
+      if (!iPhoneCommentAnswer.isConnected) iPhoneCommentAnswer = undefined;
+    }
+    if (iPhoneActiveAnswer !== active) iPhoneActiveAnswer?.closest('.AnswerItem')?.classList.remove('jimi-reading-answer');
+    const anchor = active?.closest('.AnswerItem');
+    anchor?.classList.add('jimi-reading-answer');
+    iPhoneActiveAnswer = active;
+    iPhoneOpenAnswers = open;
+    const others = [...open].filter(rich => rich !== active);
+    if (!others.length) return;
+    const top = anchor.getBoundingClientRect().top;
+    others.forEach(collapseIPhoneAnswer);
+    // 原生收起可能自动回到旧回答；保持刚展开的回答在当前阅读位置。
+    requestAnimationFrame(() => {
+      if (iPhoneActiveAnswer === active && anchor.isConnected) window.scrollBy(0, anchor.getBoundingClientRect().top - top);
+    });
+  };
   var syncIPhoneExpandedAnswers = () => {
     if (!isIPhoneLayout) return;
     for (const rich of document.querySelectorAll('.AnswerItem > .RichContent:not(.is-collapsed)')) {
       if (!iPhoneObservedAnswers.has(rich)) {
         // 知乎滚动时会替换操作栏，页面高度未必变化；在重绘前补回作者与收起位置。
-        new MutationObserver(() => {
+        new MutationObserver((changes) => {
+          if (changes?.every(change => change.type === 'attributes' && change.target !== rich)) return;
+          syncIPhoneAnswerFocus();
           syncIPhoneExpandedAnswers();
           syncIPhoneCollapseButtons();
-        }).observe(rich, { childList: true, subtree: true });
+        }).observe(rich, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
         iPhoneObservedAnswers.add(rich);
       }
       // 保留 React 管理的正文节点和图片查看器，只取消文字链接与划线入口。
@@ -949,7 +995,7 @@
         // 始终找当前原生按钮，兼容知乎展开后替换 DOM；不手动改 React 的折叠状态。
         button.onclick = () => {
           const preview = content.closest('.jimi-feed-answer')?.querySelector('.jimi-feed-preview');
-          content.querySelector('button[data-zop-retract-question="true"]')?.click();
+          collapseIPhoneAnswer(content);
           if (preview) requestAnimationFrame(() => { if (preview.getClientRects().length) preview.focus({ preventScroll: true }); });
         };
       }
@@ -6068,6 +6114,7 @@
     myListenUserHomeList.init();
     syncIPhoneFeedBatch();
     syncIPhoneFeed();
+    syncIPhoneAnswerFocus();
     syncIPhoneExpandedAnswers();
     syncIPhoneCollapseButtons();
   }

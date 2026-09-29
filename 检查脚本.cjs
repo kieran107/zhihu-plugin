@@ -42,7 +42,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -130,6 +130,53 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   added = [];
   load('Macintosh Safari', 0, 1440, 900, documentMock).syncIPhoneCollapseButtons();
   assert.equal(added.length, 0);
+  // Switching answers closes native content and its comments, keeps the new reading position,
+  // and also closes comments that arrive after the answer was already collapsed.
+  const accordion = [], scrolls = [];
+  let modalOpen = false, modalCloses = 0;
+  const makeAnswer = (canCollapse = true) => {
+    const classes = new Set(), states = new Set(['is-collapsed']);
+    const item = { isConnected: true, classList: { add: s => classes.add(s), remove: s => classes.delete(s) },
+      querySelector: selector => selector === ':scope > .RichContent' ? node : node.commentsOpen ? { click() { node.commentsOpen = false; node.commentCloses++; } } : null,
+      getBoundingClientRect: () => ({ top: accordion.indexOf(node) * (accordion[0].open ? 900 : 200) }) };
+    const node = { isConnected: true, open: false, commentsOpen: false, commentCloses: 0, closes: 0, classes,
+      classList: { contains: c => states.has(c) }, getClientRects: () => [1], closest: () => item,
+      querySelector: () => canCollapse ? { click() { node.closes++; node.setOpen(false); } } : null,
+      setOpen(value) { node.open = value; value ? states.delete('is-collapsed') : states.add('is-collapsed'); }
+    };
+    accordion.push(node);return node;
+  };
+  const focusAPI = load('iPhone Safari', 5, 402, 874, {
+    querySelectorAll: () => accordion.filter(n => n.isConnected && n.open),
+    querySelector: () => modalOpen ? { click() { modalOpen = false; modalCloses++; } } : null
+  }, { window: { addEventListener() {}, scrollBy: (x,y) => scrolls.push(y) }, requestAnimationFrame: f => f() });
+  const ownComments = node => focusAPI.trackIPhoneCommentAnswer({ target: { closest: () => ({ closest: selector => selector === '.AnswerItem' ? node?.closest() : null }) } });
+  const firstAnswer = makeAnswer(), secondAnswer = makeAnswer(), fullShortAnswer = makeAnswer(false);
+  fullShortAnswer.setOpen(true);firstAnswer.setOpen(true);focusAPI.syncIPhoneAnswerFocus();
+  assert.ok(firstAnswer.classes.has('jimi-reading-answer'));
+  assert.equal(fullShortAnswer.closes, 0);
+  firstAnswer.commentsOpen = modalOpen = true;ownComments(firstAnswer);
+  secondAnswer.setOpen(true);focusAPI.syncIPhoneAnswerFocus();focusAPI.syncIPhoneAnswerFocus();
+  assert.equal(firstAnswer.open, false);assert.equal(firstAnswer.closes, 1);
+  assert.equal(firstAnswer.commentsOpen, false);assert.equal(firstAnswer.commentCloses, 1);
+  assert.equal(modalCloses, 1);assert.equal(modalOpen, false);
+  assert.equal(firstAnswer.classes.has('jimi-reading-answer'), false);
+  assert.ok(secondAnswer.classes.has('jimi-reading-answer'));
+  assert.deepEqual(scrolls, [-700]);
+  ownComments(secondAnswer);secondAnswer.commentsOpen = true;
+  secondAnswer.setOpen(false);focusAPI.syncIPhoneAnswerFocus();
+  assert.equal(secondAnswer.commentsOpen, false);assert.equal(secondAnswer.classes.has('jimi-reading-answer'), false);
+  secondAnswer.commentsOpen = modalOpen = true;focusAPI.syncIPhoneAnswerFocus();
+  assert.equal(secondAnswer.commentsOpen, false);assert.equal(modalOpen, false);
+  ownComments(fullShortAnswer);modalOpen = true;focusAPI.collapseIPhoneAnswer(secondAnswer);
+  assert.equal(modalOpen, true, "Do not close a different answer's reply dialog");
+  ownComments(null);focusAPI.syncIPhoneAnswerFocus();
+  assert.equal(modalOpen, true, 'An article comment dialog must clear the old answer owner');
+  firstAnswer.setOpen(true);secondAnswer.setOpen(true);
+  const initialFocus = load('iPhone Safari', 5, 402, 874, { querySelectorAll: () => accordion.filter(n => n.open) },
+    { window: { addEventListener() {}, scrollBy() {} }, requestAnimationFrame: f => f() });
+  initialFocus.syncIPhoneAnswerFocus();
+  assert.equal(firstAnswer.open, true);assert.equal(secondAnswer.open, false, 'Keep the first answer when a page initially renders several open');
   // Expanded footer uses current author data without replacing native actions or duplicating itself.
   let footerAuthor, authorCreates = 0, footerChanged, observedAnswers = 0;
   const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
@@ -278,7 +325,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
     processingData2: async rows => { assert.equal(rows, pendingRows); order.push('filtered'); },
     myListenList: { loaded: false, init: () => assert.fail('Batch filtering depended on loaded flag') },
     myListenSearchListItem: { init() {} }, myListenAnswer: { init() {} }, myListenUserHomeList: { init() {} },
-    syncIPhoneFeedBatch: () => order.push('counted'), syncIPhoneFeed() {}, syncIPhoneExpandedAnswers() {}, syncIPhoneCollapseButtons() {}
+    syncIPhoneFeedBatch: () => order.push('counted'), syncIPhoneFeed() {}, syncIPhoneAnswerFocus() {}, syncIPhoneExpandedAnswers() {}, syncIPhoneCollapseButtons() {}
   });
   assert.deepEqual(order, ['filtered', 'counted']);
   // Safari's isolated script window is not the window the site calls fetch on.
@@ -298,5 +345,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and versioning, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });
