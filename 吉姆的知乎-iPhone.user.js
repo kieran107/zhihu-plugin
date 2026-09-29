@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.19
+// @version      5.21.4-iphone.20
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -490,10 +490,12 @@
       html.jim-iphone {
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
+        --jimi-comment-liked: #b95763;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
+        --jimi-comment-liked: #e79aa4;
       }
       html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
@@ -662,6 +664,7 @@
       }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent p { margin: 0 0 .5em; font: inherit !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 12px; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 button.Button--red:has(.Zi--Heart, .ZDI--HeartFill24) { color: var(--jimi-comment-liked) !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-7dh30y {
         display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; line-height: 1.4;
         margin: 0 0 12px 34px; min-height: 36px; padding: 4px 12px; border: 0 !important; border-radius: 14px;
