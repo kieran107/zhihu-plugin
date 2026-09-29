@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.17
+// @version      5.21.4-iphone.18
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -32,7 +32,7 @@
   const IPHONE_PRESET = {
     "mobile": {
       "enabled": true,
-      "pagePadding": 28,
+      "pagePadding": 21,
       "openInternalLinksInSameTab": true,
       "hideSidebars": true,
       "hideOpenApp": true,
@@ -49,8 +49,8 @@
       "theme": "2",
       "themeLight": "4",
       "themeDark": "1",
-      "fontSizeForList": "16",
-      "fontSizeForAnswer": "18",
+      "fontSizeForList": "17",
+      "fontSizeForAnswer": "19",
       "fontSizeForArticle": "18",
       "fontSizeForListTitle": "20",
       "fontSizeForAnswerTitle": "22",
@@ -488,15 +488,15 @@
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
       html.jim-iphone {
         color-scheme: light;
-        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368;
+        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #44474c;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
-        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff;
+        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
       }
       html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
-        margin: 0 !important; padding: 12px max(36px, env(safe-area-inset-left)) 0 max(36px, env(safe-area-inset-right)) !important;
+        margin: 0 !important; padding: 12px max(27px, env(safe-area-inset-left)) 0 max(27px, env(safe-area-inset-right)) !important;
         border: 0 !important;
         border-radius: 0 !important; box-shadow: none !important; background: var(--jimi-feed-bg) !important;
       }
@@ -518,7 +518,7 @@
       html.jimi-compact-feed .jimi-feed-excerpt {
         display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: ${IPHONE_PRESET.mobile.feedSummaryLines};
         margin-top: 8px; font-size: ${IPHONE_PRESET.script.fontSizeForList}px; font-weight: 400;
-        line-height: 1.4; color: var(--jimi-feed-muted) !important; overflow: hidden; overflow-wrap: anywhere;
+        line-height: 1.5; color: var(--jimi-feed-muted) !important; overflow: hidden; overflow-wrap: anywhere;
       }
       html.jimi-compact-feed .jimi-feed-excerpt:empty { display: none; }
       html.jimi-compact-feed .jimi-feed-meta {
@@ -547,7 +547,8 @@
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])::after,
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])::before,
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichContent-EntityWord svg { display: none !important; }
-      html.jimi-compact-feed .jimi-feed-answer > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner :is(.RichText, blockquote) { color: var(--jimi-answer-text) !important; }
       html.jimi-compact-feed .jimi-feed-item .ContentItem-actions { background: var(--jimi-feed-bg) !important; }
       html.jim-iphone .jimi-batch-extra,
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
