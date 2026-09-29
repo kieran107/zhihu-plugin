@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      5.21.4-iphone.16
+// @version      5.21.4-iphone.17
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
 // @downloadURL  https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.user.js
@@ -32,7 +32,7 @@
   const IPHONE_PRESET = {
     "mobile": {
       "enabled": true,
-      "pagePadding": 14,
+      "pagePadding": 28,
       "openInternalLinksInSameTab": true,
       "hideSidebars": true,
       "hideOpenApp": true,
@@ -488,15 +488,15 @@
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
       html.jim-iphone {
         color-scheme: light;
-        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8;
+        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
-        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424;
+        --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff;
       }
       html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
-        margin: 0 !important; padding: 12px max(18px, env(safe-area-inset-left)) 0 max(18px, env(safe-area-inset-right)) !important;
+        margin: 0 !important; padding: 12px max(36px, env(safe-area-inset-left)) 0 max(36px, env(safe-area-inset-right)) !important;
         border: 0 !important;
         border-radius: 0 !important; box-shadow: none !important; background: var(--jimi-feed-bg) !important;
       }
@@ -536,7 +536,7 @@
         display: inline-block; float: none; border: 0 !important; border-radius: 0; padding: 0 !important;
         min-height: 24px !important; background: transparent !important; box-shadow: none !important;
         color: var(--jimi-feed-muted) !important; font-size: 13px !important; font-weight: 400;
-        line-height: inherit; text-decoration: underline; text-underline-offset: 3px;
+        line-height: inherit; vertical-align: 3px; text-decoration: underline; text-underline-offset: 3px;
       }
       html.jim-iphone .AnswerItem:has(> .RichContent:not(.is-collapsed)) > :is(.ContentItem-meta, .AnswerItem-authorInfo),
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) :is(.Voters, .css-dvccr2) { display: none !important; }
@@ -554,11 +554,12 @@
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
       html.jim-iphone .jimi-iphone-collapse { display: none; }
       html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
-        display: block; position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
+        display: flex; align-items: center; justify-content: center;
+        position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
         box-sizing: border-box; width: calc((100% - 18px) / 4); height: 44px;
-        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid #fff; border-radius: 14px;
+        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid var(--jimi-collapse-border); border-radius: 14px;
         background: var(--jimi-pill-bg); color: var(--jimi-feed-text); box-shadow: 0 1px 3px #0001;
-        font-size: 13px; line-height: 42px; cursor: pointer; touch-action: manipulation;
+        font-size: 13px; line-height: 1.2; cursor: pointer; touch-action: manipulation;
       }
       html.jim-iphone .jimi-iphone-collapse:focus-visible { outline: 2px solid #0066ff; outline-offset: 2px; }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
@@ -632,9 +633,13 @@
         border-bottom: 1px solid var(--jimi-feed-line) !important; box-shadow: none !important; font-size: 14px; font-weight: 500;
       }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 {
+        height: 30px; align-items: stretch; flex-shrink: 0;
         border: 1px solid var(--jimi-feed-line) !important; border-radius: 14px; overflow: hidden;
       }
-      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > div { padding: 4px 10px; font-size: 12px; cursor: pointer; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > div {
+        display: flex; align-items: center; justify-content: center; height: auto; padding: 0 10px;
+        font-size: 12px; line-height: 1.25; cursor: pointer;
+      }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > .css-m0zh86 { background: var(--jimi-pill-bg) !important; }
       html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) { padding: 0 14px !important; }
       html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) > [data-id] + [data-id] { border-top: 1px solid var(--jimi-feed-line); }
@@ -655,6 +660,7 @@
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent p { margin: 0 0 .5em; font: inherit !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 12px; color: var(--jimi-feed-muted) !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-7dh30y {
+        display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; line-height: 1.4;
         margin: 0 0 12px 34px; min-height: 36px; padding: 4px 12px; border: 0 !important; border-radius: 14px;
         background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted) !important; font-size: 13px;
       }
@@ -683,15 +689,17 @@
       html.jimi-readonly-comments[data-theme] .css-kt4t4n .css-1503iqi {
         position: static !important; display: flex; align-items: center; justify-content: center; gap: 4px;
         box-sizing: border-box; width: 100%; height: 44px; margin: 0; padding: 0 8px;
-        border: 1px solid #fff !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
-        color: var(--jimi-feed-text) !important; font-size: 13px; touch-action: manipulation;
+        border: 1px solid var(--jimi-collapse-border) !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
+        color: var(--jimi-feed-text) !important; font-size: 13px; line-height: 1.2; touch-action: manipulation;
       }
       html.jimi-readonly-comments .css-1503iqi svg { fill: currentColor !important; }
       html.jimi-readonly-comments .css-79elbk:has(> .css-u76jt1) > .css-l8iyjs { display: none !important; }
+      html.jimi-readonly-comments[data-theme] .css-1aq8hf9 .css-tpyajk > .css-1onritu { padding-right: 14px !important; }
       html.jimi-readonly-comments[data-theme] .css-1aq8hf9 > button[aria-label="关闭"] {
+        display: flex; align-items: center; justify-content: center; box-sizing: border-box;
         top: auto; right: 12px; bottom: 12px; width: 104px; height: 44px; padding: 0 8px;
-        border: 1px solid #fff !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
-        color: var(--jimi-feed-text) !important; font-size: 13px; touch-action: manipulation;
+        border: 1px solid var(--jimi-collapse-border) !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
+        color: var(--jimi-feed-text) !important; font-size: 13px; line-height: 1.2; touch-action: manipulation;
       }
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"] svg { display: none; }
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
