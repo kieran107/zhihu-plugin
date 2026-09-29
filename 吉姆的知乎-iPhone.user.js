@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.1
+// @version      1.2
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -386,7 +386,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         document.head.appendChild(meta);
         colors.push(meta);
       }
-      const themeColor = document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#ffffff";
+      const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--jimi-page-bg").trim() ||
+        (document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#ffffff");
       for (const meta of colors) if (meta.content !== themeColor) meta.content = themeColor;
     };
     setViewport();
@@ -406,7 +407,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone body { min-width: 0 !important; margin: 0; width: 100%; }
       html.jim-iphone #root { min-width: 0; max-width: 100%; }
       html.jim-iphone, html.jim-iphone :is(body, #root, .App-main, .AppHeader, .Topstory,
-        .Topstory-container, .Topstory-mainColumn, .Topstory-recommend, #TopstoryContent, .ListShortcut) { background: var(--jimi-feed-bg) !important; }
+        .Topstory-container, .Topstory-mainColumn, .Topstory-recommend, #TopstoryContent, .ListShortcut) { background: var(--jimi-page-bg) !important; }
       html.jim-iphone :is(.Topstory, .Topstory-container, .Topstory-mainColumn,
         .Search-container, .SearchMain, .QuestionPage, .Question-main, .Question-mainColumn,
         .QuestionHeader, .QuestionHeader-content, .QuestionHeader-main, .QuestionHeader-footer-inner,
@@ -515,19 +516,24 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-card-shadow: 0 2px 8px #0000000b;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
+        --jimi-feed-canvas: #101113; --jimi-card-shadow: 0 2px 8px #0003;
       }
-      html.jimi-compact-feed .Topstory-container { margin-top: 0 !important; }
-      html.jim-iphone.jimi-compact-feed .TopstoryItem.jimi-feed-item {
-        margin: 0 !important; padding: 12px max(27px, env(safe-area-inset-left)) 0 max(27px, env(safe-area-inset-right)) !important;
+      html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
+      html.jim-iphone.jimi-compact-feed .Topstory-container { margin-top: 0 !important; padding-top: 12px !important; }
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) {
+        margin: 0 12px 12px !important;
+        padding: 12px max(15px, calc(env(safe-area-inset-left) - 12px)) 12px max(15px, calc(env(safe-area-inset-right) - 12px)) !important;
         border: 0 !important;
-        border-radius: 0 !important; box-shadow: none !important; background: var(--jimi-feed-bg) !important;
+        border-radius: 18px !important; box-shadow: var(--jimi-card-shadow) !important; background: var(--jimi-feed-bg) !important;
+        overflow: visible !important;
       }
-      html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 12px; border-bottom: 1px solid var(--jimi-feed-line); }
+      html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
       html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
       html.jimi-compact-feed .jimi-feed-item :is(.FeedSource, .TopstoryItem-topic) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > :is(.ContentItem-title, .AnswerItem-authorInfo, .RichContent) { display: none !important; }
@@ -757,6 +763,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       ${hideOpenApp ? `html.jim-iphone :is(.OpenInAppButton, .OpenInAppBanner, .DownloadGuide,
         .MobileAppHeader-downloadLink, .AppBanner, .css-rg1dmv, .css-1gapyfo, .css-183aq3r, .css-wfkf2m) { display: none !important; }` : ""}
     `);
+    setViewport();
     if (openInternalLinksInSameTab) {
       document.addEventListener("click", (event) => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
