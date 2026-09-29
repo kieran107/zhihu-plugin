@@ -26,11 +26,12 @@ const edited = release.prepare(source + '\n// change\n', read('iPhone知乎-参�
 assert.equal(edited.version, nextVersion);
 assert.equal(release.version(edited.meta), nextVersion);
 const withVersion = value => source.replace(/^(\/\/ @version\s+)\S+/m, `$1${value}`);
-assert.equal(release.prepare(withVersion('6.0.0'), read('iPhone知乎-参数.md'), withVersion('5.21.4-iphone.20')).version, '6.0.0');
-assert.equal(release.prepare(withVersion('6.1.0'), read('iPhone知乎-参数.md'), withVersion('6.0.9')).version, '6.1.0');
-assert.equal(release.prepare(withVersion('6.0.9') + '\n// edit\n', read('iPhone知乎-参数.md'), withVersion('6.0.9')).version, '6.0.10');
-assert.throws(() => release.prepare(withVersion('6.0.0'), read('iPhone知乎-参数.md'), withVersion('6.1.0')), /不能降低/);
-assert.throws(() => release.prepare(withVersion('06.0.0'), read('iPhone知乎-参数.md'), source), /X.Y.Z/);
+assert.equal(release.prepare(withVersion('1.0'), read('iPhone知乎-参数.md'), withVersion('6.0.0')).version, '1.0');
+assert.equal(release.prepare(withVersion('1.2'), read('iPhone知乎-参数.md'), withVersion('1.1')).version, '1.2');
+assert.equal(release.prepare(withVersion('1.9') + '\n// edit\n', read('iPhone知乎-参数.md'), withVersion('1.9')).version, '1.10');
+assert.throws(() => release.prepare(withVersion('1.0'), read('iPhone知乎-参数.md'), withVersion('1.1')), /不能降低/);
+assert.throws(() => release.prepare(withVersion('1.1'), read('iPhone知乎-参数.md'), withVersion('6.0.0')), /重置仅允许/);
+assert.throws(() => release.prepare(withVersion('1.01'), read('iPhone知乎-参数.md'), source), /1.N/);
 assert.equal(source.match(/^\/\/ @name\s+(.+)$/m)[1], '吉姆的知乎 · iPhone Safari');
 assert.equal(source.match(/^\/\/ @namespace\s+(.+)$/m)[1], 'local.jim.zhihu.iphone');
 const changedPreset = JSON.parse(JSON.stringify(preset));

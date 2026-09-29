@@ -17,15 +17,17 @@ function prepare(source, markdown, remoteSource) {
   source = source.replace(/const IPHONE_PRESET = [\s\S]*?;\n  \/\/ END IPHONE_PRESET/,
     `const IPHONE_PRESET = ${JSON.stringify(preset, null, 2).replace(/\n/g, '\n  ')};\n  // END IPHONE_PRESET`);
   let next = version(source);
-  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(next)) throw new Error('版本号须使用 X.Y.Z，例如 6.0.0。');
+  if (!/^1\.(0|[1-9]\d*)$/.test(next)) throw new Error('版本号须使用 1.N，例如 1.0、1.1、1.10。');
   if (source !== remoteSource) {
     const remoteVersion = version(remoteSource);
-    const remote = remoteVersion.match(/^(\d+)\.(\d+)\.(\d+)(-iphone\.\d+)?$/);
-    if (!remote) throw new Error('无法识别远端版本，请先核对。');
-    const local = next.split('.').map(Number);
-    const difference = local.map((n, i) => n - Number(remote[i + 1])).find(n => n !== 0) || 0;
-    if (difference < 0 || (remote[4] && difference === 0)) throw new Error('版本号不能降低；旧 iphone.N 版本须迁移到更高的 X.Y.Z。');
-    if (difference === 0) next = `${local[0]}.${local[1]}.${local[2] + 1}`;
+    // 用户要求的一次编号重置；旧安装须手动覆盖一次，不能自动降级。
+    if (!(remoteVersion === '6.0.0' && next === '1.0')) {
+      const remote = remoteVersion.match(/^1\.(0|[1-9]\d*)$/);
+      if (!remote) throw new Error('无法识别远端版本；编号重置仅允许 6.0.0 → 1.0。');
+      const localNumber = Number(next.split('.')[1]);
+      if (localNumber < Number(remote[1])) throw new Error('版本号不能降低。');
+      if (localNumber === Number(remote[1])) next = `1.${localNumber + 1}`;
+    }
     source = source.replace(/^(\/\/ @version\s+)\S+/m, `$1${next}`);
   }
   markdown = markdown.replace(/当前版本：`[^`]+`/, `当前版本：\`${next}\``);
@@ -74,6 +76,7 @@ async function publish() {
     console.warn(`提交已推送；Raw 链接暂未验证通过：${error.message}。稍后可重新运行同一命令，不必再次改版本。`);
   }
   console.log(`手机首次安装链接：${url}\n之后由 Tampermonkey 按设置的间隔自动更新；现有网页在下次加载时使用新版。`);
+  if (prepared.version === '1.0') console.log('本次重置版本编号：已安装 6.0.0 或旧 5.x 的用户须通过上述链接手动覆盖安装一次，之后恢复自动更新。');
 }
 
 module.exports = { prepare, header, version, SCRIPT, META, REPO, RAW };

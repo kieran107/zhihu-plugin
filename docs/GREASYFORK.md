@@ -10,7 +10,7 @@
 - 许可证：MIT。
 - 源码／主页：[kieran107/zhihu-plugin](https://github.com/kieran107/zhihu-plugin)
 - 反馈：[GitHub Issues](https://github.com/kieran107/zhihu-plugin/issues)
-- 版本：使用安装脚本当前 `@version`；独立版本从 6.0.0 起。
+- 版本：使用安装脚本当前 `@version`；独立版本从 1.0 起，后续按 1.1、1.2 递增。
 
 ## 可复制的详细介绍
 
@@ -53,7 +53,7 @@
 | 当前 GitHub Raw 安装包 | 本仓库固定 `.meta.js`／`.user.js` 地址 |
 | 将来的 Greasy Fork 安装包 | Greasy Fork 生成的更新地址 |
 
-Greasy Fork 会改写 `@updateURL`／`@downloadURL`，因此“GitHub 已推送”不等于“Greasy Fork 已同步”。同名、同 namespace 的脚本也不应作为两个副本同时运行。现有用户可以继续使用 GitHub 渠道，无需为了上架而重新安装。
+Greasy Fork 会改写 `@updateURL`／`@downloadURL`，因此“GitHub 已推送”不等于“Greasy Fork 已同步”。同名、同 namespace 的脚本也不应作为两个副本同时运行。现有用户可以继续使用 GitHub 渠道，无需为了上架而重新安装。版本编号重置是另一回事：旧 6.0.0／5.x 用户仍须手动覆盖安装 1.0 一次。
 
 ## 平台依据
 
