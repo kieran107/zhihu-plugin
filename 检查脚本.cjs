@@ -107,38 +107,51 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   await themeAPI.onUseThemeDark();
   assert.equal(await themeAPI.isDark(), false);
   assert.equal(themeRoot['data-theme'], 'light');
-  // New button must be unique, use the current native handler after a rerender,
-  // and never appear on content without a native collapse operation.
-  let clicks = 0, added = [], placements = 0;
+  // Keep native actions in their wrapper; recreate only our dock/collapse after a native rerender.
+  let clicks = 0, button, dock, placements = 0;
   let nativeButton = { click: () => { throw new Error('Stale native button'); } };
+  let actions, host;
   const content = {
     closest: () => null,
-    querySelector: selector => selector === '.jimi-iphone-collapse' ? added[0] : selector.includes('retract') ? nativeButton : footer
+    querySelector: selector => selector === '.jimi-iphone-collapse' ? button : selector.includes('action-dock') ? dock : selector.includes('retract') ? nativeButton : selector === '.ContentItem-actions' ? actions : null
   };
-  const newFooter = () => ({ parentElement: content, after(button) { this.nextElementSibling = button; placements++; if (!added.includes(button)) added.push(button); } });
-  let footer = newFooter();
+  const newActions = () => {
+    host = { parentElement: content, classList: { add() {} }, before(node) { dock = node; this.previousElementSibling = node; placements++; } };
+    actions = { parentElement: host, append(node) { button = node; node.parentElement = actions; } };
+  };
+  newActions();
   const documentMock = {
     querySelectorAll: () => [content, { querySelector: () => null }],
-    createElement: () => ({ setAttribute() {} })
+    createElement: () => ({ dataset: {}, setAttribute() {} })
   };
   const phone = load('iPhone Safari', 5, 402, 874, documentMock);
-  phone.syncIPhoneCollapseButtons();
-  phone.syncIPhoneCollapseButtons();
-  assert.equal(added.length, 1);
-  assert.equal(placements, 1);
-  assert.equal(added[0].type, 'button');
-  const wrapper = newFooter();
-  footer = { parentElement: wrapper }; // Native Sticky may insert a wrapper during scrolling.
-  phone.syncIPhoneCollapseButtons();
-  assert.equal(added.length, 1);
-  assert.equal(placements, 2);
-  assert.equal(wrapper.nextElementSibling, added[0]);
-  nativeButton = { click: () => clicks++ };
-  added[0].onclick();
-  assert.equal(clicks, 1);
-  added = [];
+  phone.syncIPhoneCollapseButtons();phone.syncIPhoneCollapseButtons();
+  assert.equal(placements, 1);assert.equal(button.type, 'button');
+  const originalButton = button, originalDock = dock;
+  newActions();phone.syncIPhoneCollapseButtons();
+  assert.equal(button, originalButton);assert.equal(dock, originalDock);
+  assert.equal(placements, 2);assert.equal(button.parentElement, actions);
+  actions.parentElement = content;actions.classList = { add() {} };actions.before = node => { dock = node;actions.previousElementSibling = node; };
+  phone.syncIPhoneCollapseButtons();assert.equal(actions.previousElementSibling, originalDock);
+  nativeButton = { click: () => clicks++ };button.onclick();assert.equal(clicks, 1);
+  button = dock = undefined;
   load('Macintosh Safari', 0, 1440, 900, documentMock).syncIPhoneCollapseButtons();
-  assert.equal(added.length, 0);
+  assert.equal(button, undefined);assert.equal(dock, undefined);
+  // Real comment taps dock before opening; resolve the current handler after a native rerender.
+  const commentEvents = [], frames = [];
+  let commentsCollapsed = false, currentComment = { click() { throw Error('Stale comment handler'); } };
+  const commentDock = { scrollIntoView(options) { assert.equal(options.block, 'start');commentEvents.push('dock'); } };
+  const commentRich = { isConnected: true, classList: { contains: () => commentsCollapsed }, querySelector: selector => selector.includes('action-dock') ? commentDock : currentComment };
+  const tappedComment = { textContent: '12 条评论', closest: selector => selector === '.AnswerItem' ? { querySelector: () => commentRich } : selector === '.ContentItem-actions' ? {} : null };
+  const commentAPI = load('iPhone Safari', 5, 402, 874, {}, { requestAnimationFrame: f => frames.push(f) });
+  const tap = trusted => ({ isTrusted: trusted, target: { closest: () => tappedComment }, preventDefault() { commentEvents.push('prevent'); }, stopImmediatePropagation() { commentEvents.push('stop'); } });
+  commentAPI.trackIPhoneCommentAnswer(tap(true));
+  assert.deepEqual(commentEvents, ['prevent', 'stop', 'dock']);
+  currentComment = { click() { commentEvents.push('open'); } };frames.shift()();
+  assert.equal(commentEvents.at(-1), 'open');
+  commentAPI.trackIPhoneCommentAnswer(tap(false));assert.equal(frames.length, 0);
+  commentAPI.trackIPhoneCommentAnswer(tap(true));commentsCollapsed = true;frames.shift()();
+  assert.equal(commentEvents.filter(e => e === 'open').length, 1, 'Do not open comments after switching answers');
   // Switching answers closes native content and its comments, keeps the new reading position,
   // and also closes comments that arrive after the answer was already collapsed.
   const accordion = [], scrolls = [];
@@ -150,7 +163,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
       getBoundingClientRect: () => ({ top: accordion.indexOf(node) * (accordion[0].open ? 900 : 200) }) };
     const node = { isConnected: true, open: false, commentsOpen: false, commentCloses: 0, closes: 0, classes,
       classList: { contains: c => states.has(c) }, getClientRects: () => [1], closest: () => item,
-      querySelector: () => canCollapse ? { click() { node.closes++; node.setOpen(false); } } : null,
+      querySelector: selector => selector.includes('retract') && canCollapse ? { click() { node.closes++; node.setOpen(false); } } : null,
       setOpen(value) { node.open = value; value ? states.delete('is-collapsed') : states.add('is-collapsed'); }
     };
     accordion.push(node);return node;
@@ -186,13 +199,22 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
     { window: { addEventListener() {}, scrollBy() {} }, requestAnimationFrame: f => f() });
   initialFocus.syncIPhoneAnswerFocus();
   assert.equal(firstAnswer.open, true);assert.equal(secondAnswer.open, false, 'Keep the first answer when a page initially renders several open');
+  let smallCommentsOpen = true;
+  const smallCommentToggle = { textContent: '收起评论', click() { smallCommentsOpen = false; } };
+  const smallRich = { closest: () => ({ querySelector: () => null }), querySelector: selector => selector.includes('ChatBubble') ? smallCommentToggle : null };
+  focusAPI.collapseIPhoneAnswer(smallRich);
+  assert.equal(smallCommentsOpen, false, 'Short comments close without a native bottom close button');
   // Expanded footer uses current author data without replacing native actions or duplicating itself.
   let footerAuthor, authorCreates = 0, footerChanged, observedAnswers = 0;
   const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
   const avatar = { src: 'https://pic1.zhimg.com/avatar.jpg' };
   const answer = { querySelector: selector => selector.includes('name') ? profile : avatar, getAttribute: () => '{}' };
   const plainLink = { href: '/should-not-open', tabIndex: 0, hasAttribute() { return !!this.href; }, removeAttribute() { delete this.href; } };
-  const nativeActions = { querySelector: () => footerAuthor, prepend: element => { footerAuthor = element; authorCreates++; } };
+  let voted = false;
+  const voteMock = { textContent: '赞同 1,234', dataset: {}, attrs: { 'aria-label': '赞同 1,234' },
+    classList: { contains: () => voted }, matches: () => true, getAttribute(key) { return this.attrs[key]; }, setAttribute(key, value) { this.attrs[key] = value; } };
+  const commentMock = { textContent: '45 条评论', dataset: {} };
+  const nativeActions = { querySelector: selector => selector === ':scope > .jimi-answer-author' ? footerAuthor : selector.includes('VoteButton') ? voteMock : selector.includes('ChatBubble') ? commentMock : null, prepend: element => { footerAuthor = element; authorCreates++; } };
   const rich = { querySelectorAll: () => [plainLink], querySelector: selector => selector === '.ContentItem-actions' ? nativeActions : null, closest: () => answer };
   const footerAPI = load('iPhone Safari', 5, 402, 874, {
     querySelectorAll: () => [rich],
@@ -212,6 +234,11 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(footerAuthor.querySelector('span').textContent, '作者甲');
   assert.equal(footerAuthor.querySelector('img').src, avatar.src);
   assert.equal(footerAuthor.href, '/people/author');
+  assert.equal(voteMock.dataset.jimiLabel, '1234');assert.equal(commentMock.dataset.jimiLabel, '45');
+  voted = true;footerChanged([{ type: 'attributes', target: voteMock }]);assert.equal(voteMock.attrs['aria-pressed'], 'true');
+  voteMock.textContent = '已赞同 1,235';commentMock.textContent = '收起评论';
+  footerChanged([{ type: 'characterData' }]);
+  assert.equal(voteMock.dataset.jimiLabel, '1235');assert.equal(commentMock.dataset.jimiLabel, '收起评论');
   assert.equal(plainLink.href, undefined);
   assert.equal(plainLink.tabIndex, -1);
   // The later external-link pass must not restore an empty href on plain text.
@@ -355,5 +382,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });

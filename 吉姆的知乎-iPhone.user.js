@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.7
+// @version      1.8
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -516,7 +516,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
-        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-dot: #8b94a03d;
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.28%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #a9afb8; --jimi-bar-shadow: 0 6px 18px #18243829, inset 0 1px 0 #fff; --jimi-slot-bg: #e6e8ed; --jimi-slot-shadow: inset 0 3px 8px #18243824, inset 0 -1px 0 #fff;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
         --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
       }
@@ -524,16 +525,17 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
-        --jimi-feed-canvas: #101113; --jimi-canvas-dot: #aab4c526;
+        --jimi-feed-canvas: #101113; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.19%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-bar-bg: #292a2c; --jimi-bar-border: #65686e; --jimi-bar-shadow: 0 6px 20px #0008, inset 0 1px 0 #ffffff18; --jimi-slot-bg: #101113; --jimi-slot-shadow: inset 0 3px 9px #000b, inset 0 -1px 0 #ffffff12;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
       html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
-      /* 固定纹理位于卡片下方；不监听滚动，也不拦截触摸。 */
+      /* 无缝斜向波纹固定在卡片下方，不监听滚动或拦截触摸。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-        background: radial-gradient(circle, var(--jimi-canvas-dot) .7px, transparent .9px) 0 0 / 14px 14px var(--jimi-page-bg);
+        background: var(--jimi-canvas-pattern) 0 0 / 320px 320px var(--jimi-page-bg);
       }
       html.jim-iphone.jimi-compact-feed .Topstory :is(.Topstory-container, .Topstory-mainColumn,
         .Topstory-mainColumnCard, .Topstory-content, .Topstory-recommend, .Topstory-follow, #TopstoryContent,
@@ -625,63 +627,80 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichContent-EntityWord svg { display: none !important; }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner :is(.RichText, blockquote) { color: var(--jimi-answer-text) !important; }
-      html.jimi-compact-feed .jimi-feed-item .ContentItem-actions { background: var(--jimi-feed-bg) !important; }
       html.jim-iphone .jimi-batch-extra,
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
-      html.jim-iphone .jimi-iphone-collapse { display: none; }
-      html.jim-iphone .RichContent:not(.is-collapsed):has(button[data-zop-retract-question="true"]) > .jimi-iphone-collapse {
-        display: flex; align-items: center; justify-content: center;
-        position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
-        box-sizing: border-box; width: calc((100% - 18px) / 4); height: 44px;
-        margin: -44px 0 0 auto; padding: 0 6px; border: 1px solid var(--jimi-collapse-border); border-radius: 14px;
-        background: var(--jimi-pill-bg); color: var(--jimi-feed-text); box-shadow: 0 1px 3px #0001;
-        font-size: 13px; line-height: 1.2; cursor: pointer; touch-action: manipulation;
+      html.jim-iphone :is(.jimi-iphone-collapse, .jimi-action-dock) { display: none; }
+      html.jim-iphone .RichContent:not(.is-collapsed):has(> .jimi-action-dock) { position: relative; padding-bottom: 4px; }
+      html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-dock {
+        display: block; position: absolute; bottom: 0; left: -4px; right: -4px; height: 78px; border-radius: 40px;
+        background: var(--jimi-slot-bg); box-shadow: var(--jimi-slot-shadow);
+        scroll-margin-top: max(12px, env(safe-area-inset-top)); pointer-events: none;
       }
-      html.jim-iphone .jimi-iphone-collapse:focus-visible { outline: 2px solid #0066ff; outline-offset: 2px; }
+      /* 外壳属于当前正文，原生按钮仍留在 React 的原位置；sticky 在正文边界内自然归位。 */
+      html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-host {
+        position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
+        height: 70px; margin: 22px 0 0; padding: 0; overflow: visible;
+      }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
         box-sizing: border-box; max-width: 100%; width: auto !important;
         padding-left: 0 !important; padding-right: 0 !important;
         margin-left: 0 !important; margin-right: 0 !important;
-        overflow-x: auto; white-space: nowrap; gap: 4px;
       }
-      /* 原生 Sticky 在滚动中切换多种定位状态；全部归入文档流，只有自建收起按钮悬浮。 */
       html.jim-iphone .AnswerItem .ContentItem-actions {
         position: static !important; inset: auto !important; transform: none !important;
-        transition: none !important; animation: none !important; box-shadow: none !important;
+        transition: none !important; animation: none !important;
       }
-      /* 保留原生赞同、评论；原生收起只隐藏，供回答内的悬浮按钮调用。 */
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :not(.jimi-answer-author):not(:has(.VoteButton)):not(:has(.Zi--Comment, .ZDI--ChatBubbleFill24)),
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions .VoteButton--down { display: none !important; }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions {
-        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
-        width: 100% !important; padding: 12px 0 0 !important; margin: 0 !important; overflow: visible;
-      }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed):not(:has(button[data-zop-retract-question="true"])) .ContentItem-actions {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :not(.jimi-answer-author):not(.jimi-iphone-collapse):not(:has(.VoteButton)):not(:has(.Zi--Comment, .ZDI--ChatBubbleFill24)),
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions .VoteButton--down,
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions + .Sticky--holder { display: none !important; }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :is(.jimi-answer-author, :has(.VoteButton), :has(.Zi--Comment, .ZDI--ChatBubbleFill24)) {
-        grid-row: 1; box-sizing: border-box; min-width: 0; width: 100%; height: 44px; margin: 0 !important;
-        padding: 0 6px; border: 1px solid var(--jimi-collapse-border) !important; border-radius: 14px;
-        background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted); font-size: 12px;
-        overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+        width: 100% !important; height: 70px !important; padding: 6px !important; margin: 0 !important;
+        border: 1px solid var(--jimi-bar-border) !important; border-radius: 36px; overflow: visible;
+        background: var(--jimi-bar-bg) !important; box-shadow: var(--jimi-bar-shadow) !important;
       }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.VoteButton) { grid-column: 3; padding: 0; }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :has(.Zi--Comment, .ZDI--ChatBubbleFill24) { grid-column: 2; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) > .ContentItem-actions.jimi-action-host {
+        position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; margin-top: 22px !important;
+      }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed):not(:has(button[data-zop-retract-question="true"])) .ContentItem-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :is(.jimi-answer-author, .jimi-iphone-collapse, :has(.VoteButton), :has(.Zi--Comment, .ZDI--ChatBubbleFill24)) {
+        grid-row: 1; box-sizing: border-box; min-width: 0; width: 100%; height: 56px; margin: 0 !important;
+        padding: 0 4px; border: 0 !important; border-radius: 28px;
+        background: transparent !important; color: var(--jimi-feed-text); box-shadow: none;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      html.jim-iphone .AnswerItem .ContentItem-actions > :has(.VoteButton) { grid-column: 2; }
+      html.jim-iphone .AnswerItem .ContentItem-actions > :has(.Zi--Comment, .ZDI--ChatBubbleFill24) { grid-column: 3; }
       html.jim-iphone .AnswerItem .ContentItem-actions > :has(.VoteButton) > span { display: block; height: 100%; }
-      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) {
-        box-sizing: border-box; width: 100%; height: 100%; min-height: 0 !important; margin: 0; padding: 0 6px;
-        border: 0; border-radius: 13px; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton:not(.VoteButton--down), button:has(.Zi--Comment, .ZDI--ChatBubbleFill24), .jimi-iphone-collapse) {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+        box-sizing: border-box; width: 100%; height: 56px; min-height: 44px !important; margin: 0; padding: 0 4px;
+        border: 0 !important; border-radius: 28px; background: transparent !important;
+        color: var(--jimi-feed-text); font-size: 0; line-height: 0; cursor: pointer; touch-action: manipulation;
       }
-      html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton, button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)) svg { display: none; }
+      html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton, button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)) > span:has(svg) { display: none !important; }
+      html.jim-iphone .AnswerItem .ContentItem-actions button[data-jimi-label]::after {
+        content: attr(data-jimi-label); display: block; font-size: 13px; line-height: 17px;
+        max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      }
+      html.jim-iphone .AnswerItem .ContentItem-actions button[data-jimi-label]::before {
+        content: ""; display: block; width: 25px; height: 25px; margin-bottom: 3px; background: currentColor;
+        -webkit-mask: var(--jimi-action-icon) center / contain no-repeat; mask: var(--jimi-action-icon) center / contain no-repeat;
+      }
+      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%2010H3v11h4m0-11%204-8h2v6h5a3%203%200%200%201%203%203l-1%207a3%203%200%200%201-3%203H7V10Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+      html.jim-iphone .AnswerItem .ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M5%203h14a2%202%200%200%201%202%202v11a2%202%200%200%201-2%202H9l-6%204V5a2%202%200%200%201%202-2Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+      html.jim-iphone .AnswerItem .ContentItem-actions .jimi-iphone-collapse { grid-column: 4; --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m5%2015%207-7%207%207M5%204h14%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton[aria-pressed="true"] { color: #d46d78 !important; }
       html.jim-iphone .AnswerItem .ContentItem-actions > .jimi-answer-author {
-        grid-column: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
-        color: var(--jimi-feed-muted) !important; text-decoration: none;
+        grid-column: 1; display: flex; align-items: center; justify-content: center; text-decoration: none;
       }
-      html.jim-iphone .jimi-answer-author img { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; object-fit: cover; }
+      html.jim-iphone .jimi-answer-author img { width: 34px !important; height: 34px !important; flex: 0 0 34px; border-radius: 50%; object-fit: cover; }
       html.jim-iphone .jimi-answer-author img[hidden] { display: none; }
-      html.jim-iphone .jimi-answer-author span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      html.jim-iphone .jimi-answer-author span { display: none; }
+      html.jim-iphone .jimi-answer-author:has(img[hidden])::before { content: "人"; font-size: 20px; color: var(--jimi-feed-muted); }
+      html.jim-iphone .ContentItem-actions :is(button, a):focus-visible { outline: 2px solid #0066ff; outline-offset: -2px; }
+      html.jim-iphone .ContentItem-actions :is(button, a):active { opacity: .65; }
       html.jim-iphone :is(.ContentItem-actions button, .TopstoryTabs a, .AppHeader button,
         .Modal-closeButton, .jimi-button) { min-height: 44px; touch-action: manipulation; }
       html.jim-iphone :is(input, textarea, [contenteditable="true"]) { font-size: 16px !important; }
@@ -989,10 +1008,26 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var trackIPhoneCommentAnswer = (event) => {
     const button = event.target.closest?.('.ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24), .css-7dh30y');
     if (!button || button.closest('.css-1aq8hf9')) return;
-    iPhoneCommentAnswer = button.closest('.AnswerItem')?.querySelector(':scope > .RichContent');
+    const rich = button.closest('.AnswerItem')?.querySelector(':scope > .RichContent');
+    iPhoneCommentAnswer = rich;
+    const dock = rich?.querySelector(':scope > .jimi-action-dock');
+    if (!event.isTrusted || !dock || !button.closest('.ContentItem-actions') || button.textContent.includes("收起评论")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    dock.scrollIntoView({ block: "start", behavior: "instant" });
+    requestAnimationFrame(() => {
+      if (rich.isConnected && !rich.classList.contains('is-collapsed')) {
+        rich.querySelector('.ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)')?.click();
+      }
+    });
   };
   var closeIPhoneAnswerComments = (rich) => {
-    rich.closest('.AnswerItem')?.querySelector('.css-1503iqi')?.click();
+    const answer = rich.closest('.AnswerItem');
+    const close = answer?.querySelector('.css-1503iqi');
+    const toggle = rich.querySelector('.ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)');
+    // 少量评论时知乎不生成底部关闭按钮，仍可用当前原生评论按钮收起。
+    if (close) close.click();
+    else if (toggle?.textContent.includes("收起评论")) toggle.click();
     if (iPhoneCommentAnswer === rich) closeCommentDialog();
   };
   var collapseIPhoneAnswer = (rich) => {
@@ -1031,11 +1066,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       if (!iPhoneObservedAnswers.has(rich)) {
         // 知乎滚动时会替换操作栏，页面高度未必变化；在重绘前补回作者与收起位置。
         new MutationObserver((changes) => {
-          if (changes?.every(change => change.type === 'attributes' && change.target !== rich)) return;
+          if (changes?.every(change => change.type === 'attributes' && change.target !== rich && !change.target.matches('.VoteButton'))) return;
           syncIPhoneAnswerFocus();
           syncIPhoneExpandedAnswers();
           syncIPhoneCollapseButtons();
-        }).observe(rich, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        }).observe(rich, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class', 'aria-label'] });
         iPhoneObservedAnswers.add(rich);
       }
       // 保留 React 管理的正文节点和图片查看器，只取消文字链接与划线入口。
@@ -1045,6 +1080,18 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       const actions = rich.querySelector('.ContentItem-actions');
       if (!actions) continue;
+      const vote = actions.querySelector('.VoteButton:not(.VoteButton--down)');
+      const comment = actions.querySelector('button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)');
+      for (const [button, fallback] of [[vote, "赞同"], [comment, "评论"]]) {
+        if (!button) continue;
+        const text = button.textContent.replace(/[\s,，\u200b]/g, "");
+        const label = text.match(/[\d.]+(?:万|亿|[kKwW])?/)?.[0] || (text.includes("收起评论") ? "收起评论" : fallback);
+        if (button.dataset.jimiLabel !== label) button.dataset.jimiLabel = label;
+      }
+      if (vote) {
+        const pressed = vote.classList.contains('is-active') || (vote.getAttribute('aria-label') || vote.textContent).includes("已赞同");
+        if (vote.getAttribute('aria-pressed') !== String(pressed)) vote.setAttribute('aria-pressed', String(pressed));
+      }
       const answer = rich.closest('.AnswerItem');
       const link = answer.querySelector('.AuthorInfo-name a');
       const zop = parseJSONAttr(answer.getAttribute("data-zop")) || {};
@@ -1064,6 +1111,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       author.dataset.signature = signature;
       author.querySelector('span').textContent = name;
       author.title = name;
+      author.setAttribute("aria-label", `作者：${name}`);
       if (href) author.setAttribute("href", href);
       else author.removeAttribute("href");
       const image = author.querySelector('img');
@@ -1076,26 +1124,33 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.floatingCollapse) return;
     for (const content of document.querySelectorAll('.AnswerItem .RichContent:not(.is-collapsed)')) {
       if (!content.querySelector('button[data-zop-retract-question="true"]')) continue;
-      let footer = content.querySelector('.ContentItem-actions');
-      while (footer && footer.parentElement !== content) footer = footer.parentElement;
-      if (!footer) continue;
+      const actions = content.querySelector('.ContentItem-actions');
+      let host = actions;
+      while (host && host.parentElement !== content) host = host.parentElement;
+      if (!host) continue;
+      host.classList.add("jimi-action-host");
+      let dock = content.querySelector(':scope > .jimi-action-dock');
+      if (!dock) {
+        dock = document.createElement("div");
+        dock.className = "jimi-action-dock";
+        dock.setAttribute("aria-hidden", "true");
+      }
+      if (host.previousElementSibling !== dock) host.before(dock);
       let button = content.querySelector('.jimi-iphone-collapse');
       if (!button) {
         button = document.createElement("button");
         button.type = "button";
         button.className = "jimi-iphone-collapse";
-        button.textContent = "收起 ↑";
+        button.dataset.jimiLabel = "收起";
         button.setAttribute("aria-label", "收起当前回答");
-        // 始终找当前原生按钮，兼容知乎展开后替换 DOM；不手动改 React 的折叠状态。
         button.onclick = () => {
           const preview = content.closest('.jimi-feed-answer')?.querySelector('.jimi-feed-preview');
           collapseIPhoneAnswer(content);
           if (preview) requestAnimationFrame(() => { if (preview.getClientRects().length) preview.focus({ preventScroll: true }); });
         };
       }
-      // 与底栏第四格重叠，CSS sticky 在阅读时悬浮、到达底栏时自然归位。
-      // 原生 Sticky 可能重建底栏包装，仅重新定位我们自己的按钮。
-      if (footer.nextElementSibling !== button) footer.after(button);
+      // 只移动自有按钮；原生作者／赞同／评论继续留在 React 管理的操作栏内。
+      if (button.parentElement !== actions) actions.append(button);
     }
   };
 
