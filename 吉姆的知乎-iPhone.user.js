@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.3
+// @version      1.4
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -677,20 +677,22 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) svg { fill: currentColor !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1onritu {
         padding: 12px 14px !important; min-height: 44px; box-sizing: border-box;
-        border-bottom: 1px solid var(--jimi-feed-line) !important; box-shadow: none !important; font-size: 14px; font-weight: 500;
+        display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+        border-bottom: 1px solid var(--jimi-feed-line) !important; box-shadow: none !important; font-size: 17px; line-height: 1.4; font-weight: 500;
       }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1onritu :is(.css-hmd01z, .css-1k10w8f, .css-1jm49l2) { font-size: inherit !important; line-height: inherit !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 {
-        height: 30px; align-items: stretch; flex-shrink: 0;
+        height: 36px; align-items: stretch; flex-shrink: 0;
         border: 1px solid var(--jimi-feed-line) !important; border-radius: 14px; overflow: hidden;
       }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > div {
         display: flex; align-items: center; justify-content: center; height: auto; padding: 0 10px;
-        font-size: 12px; line-height: 1.25; cursor: pointer;
+        font-size: 14px; line-height: 1.4; cursor: pointer;
       }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-u3vsx3 > .css-m0zh86 { background: var(--jimi-pill-bg) !important; }
       html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) { padding: 0 14px !important; }
       html.jim-iphone[data-theme] :is(.css-18ld3w0, .css-16zdamy) > [data-id] + [data-id] { border-top: 1px solid var(--jimi-feed-line); }
-      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) :is(.css-jp43l4, .css-13445jb, .css-8axkqi) { padding: 14px 0 !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) :is(.css-jp43l4, .css-13445jb, .css-8axkqi) { padding: 16px 0 !important; }
       html.jim-iphone[data-theme] .css-1aq8hf9 .css-8axkqi { border-bottom: 0 !important; }
       html.jim-iphone[data-theme] .css-34podr > [data-id] { padding: 0 14px; border-bottom: 0 !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) [data-id] [data-id] {
@@ -700,17 +702,20 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-1jll2aj { margin-right: 10px; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .Avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-14nvvry { min-width: 0; }
-      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-swj9d4 { font-size: 13px; font-weight: 500; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-swj9d4 { font-size: 16px; line-height: 1.4; font-weight: 500; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-swj9d4 a { font-size: inherit !important; line-height: inherit !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-8v0dsd { font-size: 13px; line-height: 18px; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent {
-        margin-top: 6px; font-size: 15px !important; font-weight: 400 !important; line-height: 1.65 !important; overflow-wrap: anywhere;
+        margin-top: 8px; font-size: 17px !important; font-weight: 400 !important; line-height: 1.65 !important; overflow-wrap: anywhere;
       }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent p { margin: 0 0 .5em; font: inherit !important; }
-      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 12px; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 15px; line-height: 1.4; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 :is(div, span, button) { font-size: inherit !important; line-height: inherit !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 button.Button--red:has(.Zi--Heart, .ZDI--HeartFill24) { color: var(--jimi-comment-liked) !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-7dh30y {
         display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; line-height: 1.4;
-        margin: 0 0 12px 34px; min-height: 36px; padding: 4px 12px; border: 0 !important; border-radius: 14px;
-        background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted) !important; font-size: 13px;
+        margin: 0 0 12px 34px; min-height: 40px; padding: 6px 12px; border: 0 !important; border-radius: 14px;
+        background: var(--jimi-pill-bg) !important; color: var(--jimi-feed-muted) !important; font-size: 15px;
       }
       html.jim-iphone[data-theme] .css-1aq8hf9 :is(.css-1e7fksk, .Modal-content, .css-tpyajk) { border-radius: inherit; }
       html.jim-iphone[data-theme] .css-1aq8hf9 .Modal-content { padding: 0 !important; }
@@ -723,11 +728,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         position: static !important; transform: none !important; box-shadow: none !important;
         background: var(--jimi-feed-bg) !important; padding: 8px 0 !important; border: 0 !important;
       }
-      html.jim-iphone[data-theme] .css-kt4t4n .css-1503iqi { color: var(--jimi-feed-muted) !important; font-size: 13px; }
+      html.jim-iphone[data-theme] .css-kt4t4n .css-1503iqi { color: var(--jimi-feed-muted) !important; font-size: 15px; }
       /* 复用原生收起评论按钮，悬浮范围限制在当前评论区。 */
       html.jimi-readonly-comments[data-theme] .css-kt4t4n {
         position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 4;
-        width: 104px !important; height: 44px; margin: 8px 0 0 auto !important; padding: 0 !important;
+        width: 120px !important; height: 44px; margin: 8px 0 0 auto !important; padding: 0 !important;
         background: transparent !important;
       }
       html.jimi-readonly-comments .css-kt4t4n .css-p1wstz {
@@ -738,16 +743,16 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         position: static !important; display: flex; align-items: center; justify-content: center; gap: 4px;
         box-sizing: border-box; width: 100%; height: 44px; margin: 0; padding: 0 8px;
         border: 1px solid var(--jimi-collapse-border) !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
-        color: var(--jimi-feed-text) !important; font-size: 13px; line-height: 1.2; touch-action: manipulation;
+        color: var(--jimi-feed-text) !important; font-size: 15px; line-height: 1.2; white-space: nowrap; touch-action: manipulation;
       }
       html.jimi-readonly-comments .css-1503iqi svg { fill: currentColor !important; }
       html.jimi-readonly-comments .css-79elbk:has(> .css-u76jt1) > .css-l8iyjs { display: none !important; }
       html.jimi-readonly-comments[data-theme] .css-1aq8hf9 .css-tpyajk > .css-1onritu { padding-right: 14px !important; }
       html.jimi-readonly-comments[data-theme] .css-1aq8hf9 > button[aria-label="关闭"] {
         display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-        top: auto; right: 12px; bottom: 12px; width: 104px; height: 44px; padding: 0 8px;
+        top: auto; right: 12px; bottom: 12px; width: 120px; height: 44px; padding: 0 8px;
         border: 1px solid var(--jimi-collapse-border) !important; border-radius: 14px; background: var(--jimi-pill-bg) !important;
-        color: var(--jimi-feed-text) !important; font-size: 13px; line-height: 1.2; touch-action: manipulation;
+        color: var(--jimi-feed-text) !important; font-size: 15px; line-height: 1.2; white-space: nowrap; touch-action: manipulation;
       }
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"] svg { display: none; }
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
