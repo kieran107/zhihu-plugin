@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -233,6 +233,71 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   const smallRich = { closest: () => ({ querySelector: () => null }), querySelector: selector => selector.includes('ChatBubble') ? smallCommentToggle : null };
   focusAPI.collapseIPhoneAnswer(smallRich);
   assert.equal(smallCommentsOpen, false, 'Short comments close without a native bottom close button');
+  // Auto-collapse arms only inside the reading band; comments and stale observers cannot close it.
+  let autoOpen = true, autoComments = false, autoCloses = 0, rowTop = 500, nextTop = 900;
+  const autoFrames = [], autoScrolls = [], autoObservers = [];
+  const nextRow = { isConnected: true, getClientRects: () => [1], getBoundingClientRect: () => ({ top: nextTop }) };
+  const autoRow = { isConnected: true, nextElementSibling: nextRow, classList: { add() {}, remove() {} },
+    querySelector: selector => selector === ':scope > .RichContent' ? autoRich : null,
+    getBoundingClientRect: () => ({ top: rowTop }) };
+  const autoComment = { get textContent() { return autoComments ? '收起评论' : '12 条评论'; },
+    closest: selector => selector === '.AnswerItem' ? autoRow : selector === '.ContentItem-actions' ? autoActions : null,
+    click() { autoComments = !autoComments; autoAPI.syncIPhoneAutoCollapse(); } };
+  let autoActions = { querySelector: () => autoComment };
+  const autoHost = {}, autoDock = { scrollIntoView() { autoObservers.at(-1).emit(12, 72); } };
+  const autoRich = { isConnected: true, getClientRects: () => autoOpen ? [1] : [],
+    classList: { contains: () => !autoOpen }, closest: () => autoRow,
+    querySelector: selector => selector.includes('retract') ? { click() { autoCloses++; autoOpen = false; rowTop += 100; nextTop -= 900; } }
+      : selector.includes('action-host') ? autoHost : selector.includes('action-dock') ? autoDock
+      : selector.includes('ChatBubble') ? autoComment : selector === '.ContentItem-actions' ? autoActions : null };
+  const autoAPI = load('iPhone Safari', 5, 402, 874, { querySelectorAll: () => autoOpen ? [autoRich] : [] }, {
+    window: { addEventListener() {}, scrollBy: (x, y) => autoScrolls.push(y) },
+    requestAnimationFrame: callback => autoFrames.push(callback),
+    getComputedStyle: node => { assert.equal(node, autoHost); return { bottom: '12px' }; },
+    IntersectionObserver: class {
+      constructor(callback, options) { this.callback = callback; this.options = options; autoObservers.push(this); }
+      observe(target) { this.target = target; }
+      disconnect() { this.disconnected = true; }
+      emit(top, bottom) { this.callback([{ target: this.target, rootBounds: { top: 180, bottom: 868 },
+        boundingClientRect: { top, bottom }, isIntersecting: bottom > 180 && top < 868 }]); }
+    }
+  });
+  const reopenAuto = () => {
+    autoAPI.syncIPhoneAnswerFocus();autoOpen = true;autoAPI.syncIPhoneAnswerFocus();autoAPI.syncIPhoneAutoCollapse();
+    return autoObservers.at(-1);
+  };
+  autoAPI.syncIPhoneAnswerFocus();autoAPI.syncIPhoneAutoCollapse();
+  let autoObserver = autoObservers.at(-1);
+  assert.equal(autoObserver.options.rootMargin, '-180px 0px -6px 0px');
+  autoObserver.emit(860, 920);assert.equal(autoCloses, 0, 'Opening outside the band must stay open');
+  autoObserver.emit(802, 862);autoObserver.emit(808, 868);assert.equal(autoCloses, 0, 'Allow small bottom drift');
+  autoObserver.emit(809, 869);assert.equal(autoCloses, 1);assert.ok(autoObserver.disconnected);
+  autoObserver.emit(850, 910);assert.equal(autoCloses, 1, 'Ignore queued callbacks after collapse');
+  autoFrames.shift()();assert.equal(autoScrolls.at(-1), 100, 'Preserve the current card at the lower edge');
+  autoObserver = reopenAuto();autoObserver.emit(300, 360);autoObserver.emit(180, 240);assert.equal(autoCloses, 1);
+  autoObserver.emit(179, 239);assert.equal(autoCloses, 2);
+  autoFrames.shift()();assert.equal(autoScrolls.at(-1), -900, 'Preserve the following card at the upper edge');
+  autoObserver = reopenAuto();autoObserver.emit(802, 862);
+  autoAPI.trackIPhoneCommentAnswer({ isTrusted: true, target: { closest: () => autoComment }, preventDefault() {}, stopImmediatePropagation() {} });
+  assert.equal(autoCloses, 2, 'Docking before the native comment handler must not close the answer');
+  autoFrames.shift()();assert.equal(autoComments, true);
+  autoObserver.emit(300, 360);autoObserver.emit(12, 72);assert.equal(autoCloses, 2, 'Reading comments suspends auto-collapse');
+  autoComment.click();autoObserver.emit(12, 72);assert.equal(autoCloses, 2, 'Closing comments must not immediately close the answer');
+  autoObserver.emit(300, 360);autoObserver.emit(179, 239);assert.equal(autoCloses, 3);
+  autoFrames.shift()();
+  autoObserver = reopenAuto();autoObserver.emit(802, 862);
+  autoActions = { querySelector: () => autoComment };autoAPI.syncIPhoneAutoCollapse();
+  const replacementObserver = autoObservers.at(-1);assert.ok(autoObserver.disconnected);
+  replacementObserver.emit(802, 862);autoObserver.emit(179, 239);assert.equal(autoCloses, 3, 'A replaced React toolbar cannot close the active answer');
+  autoAPI.syncIPhoneAutoCollapse(true);assert.ok(replacementObserver.disconnected);
+  autoObservers.at(-1).emit(120, 180);assert.equal(autoCloses, 3, 'Resizing outside the band must not close immediately');
+  autoObservers.at(-1).emit(802, 862);autoAPI.collapseIPhoneAnswer(autoRich);
+  assert.ok(autoObservers.at(-1).disconnected);assert.equal(autoCloses, 4, 'Manual collapse cleans up its observer');
+  autoObserver = reopenAuto();autoRich.isConnected = false;autoObserver.emit(0, 60);
+  assert.ok(autoObserver.disconnected);assert.equal(autoCloses, 4, 'Removed answers disconnect without another click');
+  autoRich.isConnected = true;autoObserver = reopenAuto();autoObserver.emit(802, 862);
+  autoActions = { querySelector: () => autoComment };autoAPI.syncIPhoneAutoCollapse();
+  autoObservers.at(-1).emit(179, 239);assert.equal(autoCloses, 5, 'Preserve an armed boundary across native toolbar replacement');
   // Expanded footer uses current author data without replacing native actions or duplicating itself.
   let footerAuthor, authorCreates = 0, footerChanged, observedAnswers = 0;
   const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
@@ -411,5 +476,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });

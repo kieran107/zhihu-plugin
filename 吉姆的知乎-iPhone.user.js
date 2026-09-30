@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.18
+// @version      1.19
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -367,6 +367,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!isIPhoneLayout) return;
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
     window.addEventListener("click", trackIPhoneCommentAnswer, true);
+    window.addEventListener("resize", () => syncIPhoneAutoCollapse(true), { passive: true });
     document.documentElement.classList.add("jim-iphone");
     syncIPhonePageRoute();
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
@@ -1028,6 +1029,64 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var iPhoneOpenAnswers = new Set();
   var iPhoneActiveAnswer;
   var iPhoneCommentAnswer;
+  var iPhoneAutoCollapse;
+  var resetIPhoneAutoCollapse = () => {
+    iPhoneAutoCollapse?.observer.disconnect();
+    iPhoneAutoCollapse = undefined;
+  };
+  var syncIPhoneAutoCollapse = (resized = false) => {
+    if (!isIPhoneLayout || !IPHONE_PRESET.mobile.floatingCollapse || typeof IntersectionObserver === "undefined") return;
+    const rich = iPhoneActiveAnswer;
+    const actions = rich?.querySelector('.ContentItem-actions');
+    const host = rich?.querySelector(':scope > .jimi-action-host');
+    if (!rich?.isConnected || rich.classList.contains('is-collapsed') || !actions || !host) {
+      resetIPhoneAutoCollapse();
+      return;
+    }
+    const commentsOpen = actions.querySelector('button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)')?.textContent.includes("收起评论");
+    const previous = iPhoneAutoCollapse;
+    if (!resized && previous?.rich === rich && previous.actions === actions) {
+      previous.commentsOpen = commentsOpen;
+      if (commentsOpen) { previous.armed = false; previous.commentHold = false; }
+      return;
+    }
+    resetIPhoneAutoCollapse();
+    const state = { rich, actions, armed: !resized && previous?.rich === rich && previous.armed && !commentsOpen && !previous.commentHold, commentsOpen,
+      commentHold: !commentsOpen && previous?.rich === rich && previous.commentHold };
+    // 上边界约为背景标题下沿；下边界比正常悬浮位低 6px，避开 sticky 的像素抖动。
+    const bottom = Math.max(0, (parseFloat(getComputedStyle(host).bottom) || 12) - 6);
+    state.observer = new IntersectionObserver((entries) => {
+      if (iPhoneAutoCollapse !== state) return;
+      if (!rich.isConnected || rich.classList.contains('is-collapsed')) { resetIPhoneAutoCollapse(); return; }
+      for (const entry of entries) {
+        if (entry.target !== actions || !entry.rootBounds) continue;
+        if (state.commentHold || state.commentsOpen) { state.armed = false; continue; }
+        const rect = entry.boundingClientRect, bounds = entry.rootBounds;
+        const inside = entry.isIntersecting && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+        if (inside) { state.armed = true; continue; }
+        // 先进入阅读范围才启用，避免刚展开、旋转屏幕或打开评论时立即被收起。
+        if (!state.armed) continue;
+        const above = rect.top < bounds.top;
+        if (!above && rect.bottom <= bounds.bottom) continue;
+        const item = rich.closest('.TopstoryItem') || rich.closest('.AnswerItem');
+        let anchor = item;
+        if (above) {
+          for (let next = item?.nextElementSibling; next; next = next.nextElementSibling) {
+            if (next.getClientRects().length) { anchor = next; break; }
+          }
+        }
+        const top = anchor?.getBoundingClientRect().top;
+        collapseIPhoneAnswer(rich);
+        // 向下读过文末时保住下一条；回看开头时保住当前卡片，抵消原生收起的跳转。
+        requestAnimationFrame(() => {
+          if (anchor?.isConnected && (!iPhoneActiveAnswer || iPhoneActiveAnswer === rich)) window.scrollBy(0, anchor.getBoundingClientRect().top - top);
+        });
+        break;
+      }
+    }, { rootMargin: `-180px 0px -${bottom}px 0px`, threshold: [0, 1] });
+    iPhoneAutoCollapse = state;
+    state.observer.observe(actions);
+  };
   var trackIPhoneCommentAnswer = (event) => {
     const button = event.target.closest?.('.ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24), .css-7dh30y');
     if (!button || button.closest('.css-1aq8hf9')) return;
@@ -1037,6 +1096,10 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!event.isTrusted || !dock || !button.closest('.ContentItem-actions') || button.textContent.includes("收起评论")) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    if (iPhoneAutoCollapse?.rich === rich) {
+      iPhoneAutoCollapse.commentHold = true;
+      iPhoneAutoCollapse.armed = false;
+    }
     dock.scrollIntoView({ block: "start", behavior: "instant" });
     requestAnimationFrame(() => {
       if (rich.isConnected && !rich.classList.contains('is-collapsed')) {
@@ -1054,6 +1117,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (iPhoneCommentAnswer === rich) closeCommentDialog();
   };
   var collapseIPhoneAnswer = (rich) => {
+    if (iPhoneAutoCollapse?.rich === rich) resetIPhoneAutoCollapse();
     closeIPhoneAnswerComments(rich);
     rich.querySelector('button[data-zop-retract-question="true"]')?.click();
   };
@@ -1073,6 +1137,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     const anchor = active?.closest('.AnswerItem');
     anchor?.classList.add('jimi-reading-answer');
     iPhoneActiveAnswer = active;
+    if (iPhoneAutoCollapse && iPhoneAutoCollapse.rich !== active) resetIPhoneAutoCollapse();
     iPhoneOpenAnswers = open;
     const others = [...open].filter(rich => rich !== active);
     if (!others.length) return;
@@ -1175,6 +1240,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       // 只移动自有按钮；原生作者／赞同／评论继续留在 React 管理的操作栏内。
       if (button.parentElement !== actions) actions.append(button);
     }
+    syncIPhoneAutoCollapse();
   };
 
   var judgeBrowserType = () => {
