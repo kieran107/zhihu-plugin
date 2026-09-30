@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.27
+// @version      1.28
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -528,7 +528,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone {
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-answer-text: #202124;
-        --jimi-comment-liked: #b95763;
+        --jimi-liked: #06f;
+        --jimi-like-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%2010H3v11h4m0-11%204-8h2v6h5a3%203%200%200%201%203%203l-1%207a3%203%200%200%201-3%203H7V10Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
         --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-grid-line: #8b94a059; --jimi-imprint-ink: #92969c;
         --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 6px #18243824, 0 0 20px #18243833; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
@@ -538,7 +539,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-answer-text: #d0d2d6;
-        --jimi-comment-liked: #e79aa4;
+        --jimi-liked: #6aa6ff;
         --jimi-feed-canvas: #101113; --jimi-grid-line: #aab4c53d; --jimi-imprint-ink: #737880;
         --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 8px #0009, 0 0 22px #000b; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
@@ -617,8 +618,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed))::after { opacity: 1; }
       /* 用前后卡片位移拉开视觉间距，不逐帧改变长回答高度或外边距。 */
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-12px); }
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(12px); }
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-24px); }
+      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(24px); }
       /* 动画只作用于视口内的独立底框、裁切和透明度，不插值正文布局高度。 */
       .jimi-answer-surface {
         position: fixed; pointer-events: none; z-index: 1000; border-radius: 18px;
@@ -641,7 +642,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jimi-compact-feed .TopstoryItem:has(.AnswerItem > .RichContent.is-collapsed .ContentItem-more):not(.jimi-feed-item) { visibility: hidden; }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
-      html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
+      html.jim-iphone .AnswerItem.jimi-read-answer:has(> .RichContent.is-collapsed) { opacity: .55; }
       html.jimi-compact-feed .jimi-feed-item :is(.FeedSource, .TopstoryItem-topic) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > :is(.ContentItem-title, .AnswerItem-authorInfo, .RichContent) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-preview { display: none; }
@@ -755,10 +756,10 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         content: ""; display: block; width: 23px; height: 23px; margin-bottom: 2px; background: currentColor;
         -webkit-mask: var(--jimi-action-icon) center / contain no-repeat; mask: var(--jimi-action-icon) center / contain no-repeat;
       }
-      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%2010H3v11h4m0-11%204-8h2v6h5a3%203%200%200%201%203%203l-1%207a3%203%200%200%201-3%203H7V10Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) { --jimi-action-icon: var(--jimi-like-icon); }
       html.jim-iphone .AnswerItem .ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M5%203h14a2%202%200%200%201%202%202v11a2%202%200%200%201-2%202H9l-6%204V5a2%202%200%200%201%202-2Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
       html.jim-iphone .AnswerItem .ContentItem-actions .jimi-iphone-collapse { grid-column: 4; --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m5%2015%207-7%207%207M5%204h14%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
-      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton[aria-pressed="true"] { color: #d46d78 !important; }
+      html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton[aria-pressed="true"] { color: var(--jimi-liked) !important; }
       html.jim-iphone .AnswerItem .ContentItem-actions > .jimi-answer-author {
         grid-column: 1; display: flex; align-items: center; justify-content: center; text-decoration: none;
       }
@@ -827,7 +828,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .CommentContent p { margin: 0 0 .5em; font: inherit !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 { margin-top: 8px; font-size: 15px; line-height: 1.4; color: var(--jimi-feed-muted) !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 :is(div, span, button) { font-size: inherit !important; line-height: inherit !important; }
-      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 button.Button--red:has(.Zi--Heart, .ZDI--HeartFill24) { color: var(--jimi-comment-liked) !important; }
+      html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 button.Button--red:has(.Zi--Heart, .ZDI--HeartFill24) { color: var(--jimi-liked) !important; }
+      /* 保留原生点赞节点与事件，只把红心绘制替换为回答栏相同的拇指图标。 */
+      html.jim-iphone :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 button > span:has(.Zi--Heart, .ZDI--HeartFill24)::before {
+        content: ""; display: inline-block; width: 1.2em; height: 1.2em; margin-right: 4px; background: currentColor;
+        -webkit-mask: var(--jimi-like-icon) center / contain no-repeat; mask: var(--jimi-like-icon) center / contain no-repeat;
+      }
+      html.jim-iphone :is(.css-u76jt1, .css-1aq8hf9) .css-140jo2 :is(.Zi--Heart, .ZDI--HeartFill24) { display: none !important; }
       html.jim-iphone[data-theme] :is(.css-u76jt1, .css-1aq8hf9) .css-7dh30y {
         display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; line-height: 1.4;
         margin: 0 0 12px 34px; min-height: 40px; padding: 6px 12px; border: 0 !important; border-radius: 14px;
@@ -1326,6 +1333,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (iPhoneActiveAnswer !== active) iPhoneActiveAnswer?.closest('.AnswerItem')?.classList.remove('jimi-reading-answer');
     const anchor = active?.closest('.AnswerItem');
     anchor?.classList.add('jimi-reading-answer');
+    // 仅标记本页实际展开过的回答；收起才淡化，重新展开恢复原色。
+    anchor?.classList.add('jimi-read-answer');
     iPhoneActiveAnswer = active;
     if (iPhoneAutoCollapse && iPhoneAutoCollapse.rich !== active) resetIPhoneAutoCollapse();
     iPhoneOpenAnswers = open;

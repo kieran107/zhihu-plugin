@@ -215,6 +215,8 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   const firstAnswer = makeAnswer(), secondAnswer = makeAnswer(), fullShortAnswer = makeAnswer(false);
   fullShortAnswer.setOpen(true);firstAnswer.setOpen(true);focusAPI.syncIPhoneAnswerFocus();
   assert.ok(firstAnswer.classes.has('jimi-reading-answer'));
+  assert.ok(firstAnswer.classes.has('jimi-read-answer'));
+  assert.equal(secondAnswer.classes.has('jimi-read-answer'), false, 'Unopened answers keep their original colors');
   assert.equal(fullShortAnswer.closes, 0);
   firstAnswer.commentsOpen = modalOpen = true;ownComments(firstAnswer);
   secondAnswer.setOpen(true);focusAPI.syncIPhoneAnswerFocus();focusAPI.syncIPhoneAnswerFocus();
@@ -222,11 +224,13 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(firstAnswer.commentsOpen, false);assert.equal(firstAnswer.commentCloses, 1);
   assert.equal(modalCloses, 1);assert.equal(modalOpen, false);
   assert.equal(firstAnswer.classes.has('jimi-reading-answer'), false);
+  assert.ok(firstAnswer.classes.has('jimi-read-answer'), 'Read status survives automatic collapse when switching');
   assert.ok(secondAnswer.classes.has('jimi-reading-answer'));
   assert.deepEqual(scrolls, [-700]);
   ownComments(secondAnswer);secondAnswer.commentsOpen = true;
   secondAnswer.setOpen(false);focusAPI.syncIPhoneAnswerFocus();
   assert.equal(secondAnswer.commentsOpen, false);assert.equal(secondAnswer.classes.has('jimi-reading-answer'), false);
+  assert.ok(secondAnswer.classes.has('jimi-read-answer'), 'Read status survives native collapse');
   secondAnswer.commentsOpen = modalOpen = true;focusAPI.syncIPhoneAnswerFocus();
   assert.equal(secondAnswer.commentsOpen, false);assert.equal(modalOpen, false);
   ownComments(fullShortAnswer);modalOpen = true;focusAPI.collapseIPhoneAnswer(secondAnswer);
