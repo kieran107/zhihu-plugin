@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.26
+// @version      1.27
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -704,6 +704,10 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-host {
         position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
         height: 60px; margin: ${Number(IPHONE_PRESET.script.contentLineHeight) * 2}px 0 0; padding: 0; overflow: visible;
+      }
+      /* 只压缩发布时间后的留白，保留 sticky 上界的两行高度与槽内 2px 窄边。 */
+      html.jim-iphone .RichContent:not(.is-collapsed):has(> .jimi-action-dock) > :is(.ContentItem-time, :has(> .ContentItem-time)) {
+        margin-bottom: calc(1px - ${Number(IPHONE_PRESET.script.contentLineHeight)}px) !important;
       }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
         box-sizing: border-box; max-width: 100%; width: auto !important;
