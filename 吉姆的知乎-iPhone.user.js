@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.22
+// @version      1.23
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -551,6 +551,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 1;
         background: var(--jimi-page-bg); pointer-events: none;
       }
+      /* 取色层只垫底，滚动正文必须能盖住它，避免顶部残留 12px 塔尖。 */
+      html.jim-iphone .App-main { position: relative; z-index: 2; }
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) #JIMI_SAFARI_TINT {
         background-image: var(--jimi-canvas-top); background-size: 100% 96px; background-repeat: no-repeat;
       }
