@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.20
+// @version      1.21
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -540,6 +540,14 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
+      /* Safari 顶栏需要可取色的实色 fixed 元素；12px 高于其细边框过滤阈值，伪元素底板仍负责完整纹理。 */
+      html.jim-iphone #JIMI_SAFARI_TINT {
+        position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 1;
+        background: var(--jimi-page-bg); pointer-events: none;
+      }
+      html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) #JIMI_SAFARI_TINT {
+        background-image: var(--jimi-canvas-top); background-size: 100% 96px; background-repeat: no-repeat;
+      }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
       /* 横线按透视递密，但最小间距为 1.5px，继续画到尖端；不截断、不填灰，避免空白与混叠。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
@@ -574,6 +582,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-compact-feed .jimi-feed-brand { margin: 0; color: inherit; font-size: 42px; line-height: 1.25; font-weight: 650; letter-spacing: 1px; }
       html.jimi-compact-feed .jimi-feed-tagline { margin: 0; font-size: 18px; line-height: 26px; letter-spacing: 2px; }
       @media (prefers-reduced-motion: reduce) {
+        html.jim-iphone #JIMI_SAFARI_TINT { background-image: none !important; }
         html.jim-iphone.jimi-compact-feed .Topstory::before,
         html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint) { position: absolute; }
       }
@@ -5317,7 +5326,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   };
 
   var initHTML = () => {
-    document.body.appendChild(domC("div", { id: "JIMI_MAIN", innerHTML: INNER_HTML }));
+    const tint = isIPhoneLayout ? '<div id="JIMI_SAFARI_TINT" aria-hidden="true"></div>' : '';
+    document.body.appendChild(domC("div", { id: "JIMI_MAIN", innerHTML: tint + INNER_HTML }));
   };
   var appendHomeLink = (domMain = document.body) => {
     const userInfo = store.getUserInfo();

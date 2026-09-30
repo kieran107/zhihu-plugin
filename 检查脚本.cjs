@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -74,6 +74,16 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(api.isIPhoneLayout, true);
   assert.equal(load('Macintosh Safari', 0, 1440, 900).isIPhoneLayout, false);
   assert.equal(load('iPhone Safari', 5, 874, 402).isIPhoneLayout, true); // landscape
+  for (const phone of [false, true]) {
+    const nodes = [];
+    const layout = load('Macintosh Safari', phone ? 5 : 0, phone ? 402 : 1440, 874, {
+      createElement: () => ({}), body: { appendChild: node => nodes.push(node) }
+    });
+    layout.initHTML();
+    assert.equal(nodes.length, 1);
+    assert.equal(nodes[0].innerHTML.includes('id="JIMI_SAFARI_TINT" aria-hidden="true"'), phone, 'Safari tint is decorative and phone-only');
+    assert.ok(nodes[0].innerHTML.includes('JIMI_PREVIEW_IMAGE'));
+  }
   for (const force of [false, true]) {
     const config = await api.myStorage.getConfig(force);
     assert.equal(config.fontSizeForAnswer, preset.script.fontSizeForAnswer);
