@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.24
+// @version      1.25
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -626,8 +626,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         z-index: 1001; background: transparent !important; box-shadow: none !important;
       }
       html.jim-iphone .TopstoryItem.jimi-answer-morph::after { opacity: 0 !important; }
-      html.jim-iphone.jimi-answer-changing .TopstoryItem:has(.AnswerItem),
-      html.jim-iphone.jimi-answer-changing .TopstoryItem:has(.AnswerItem)::after { transition: none; }
+      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) .TopstoryItem:has(.AnswerItem),
+      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) .TopstoryItem:has(.AnswerItem)::after { transition: none; }
       @media (prefers-reduced-motion: reduce) {
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem),
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after { transition: none; }
@@ -1084,11 +1084,25 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (rich.classList.contains('is-collapsed')) changeIPhoneAnswer(rich, () => button.click());
     else collapseIPhoneAnswer(rich);
   };
-  var changeIPhoneAnswer = (rich, change) => {
+  var changeIPhoneAnswer = (rich, change, animated = true) => {
     const apply = () => {
       iPhoneAnswerClick = true;
       try { change(); } finally { iPhoneAnswerClick = false; }
     };
+    if (!animated) {
+      const root = document.documentElement;
+      return new Promise(resolve => {
+        // 边界收起直接更新原生状态；同一帧禁用邻卡／阴影过渡，完成保位后再恢复。
+        root.classList.add('jimi-answer-instant');
+        try { apply(); } finally {
+          requestAnimationFrame(() => {
+            root.getBoundingClientRect();
+            root.classList.remove('jimi-answer-instant');
+            resolve();
+          });
+        }
+      });
+    }
     const item = rich.closest('.TopstoryItem');
     // ponytail: 复用 Safari 原生 WAAPI；减少动态效果或不支持时直接切换，不加载动画库。
     if (!item?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || iPhoneAnswerMotion?.updating) {
@@ -1236,7 +1250,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
             if (next.getClientRects().length) { anchor = next; break; }
           }
         }
-        collapseIPhoneAnswer(rich, anchor);
+        collapseIPhoneAnswer(rich, anchor, false);
         break;
       }
     }, { rootMargin: `-180px 0px -${bottom}px 0px`, threshold: [0, 1] });
@@ -1272,7 +1286,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     else if (toggle?.textContent.includes("收起评论")) toggle.click();
     if (iPhoneCommentAnswer === rich) closeCommentDialog();
   };
-  var collapseIPhoneAnswer = (rich, anchor) => {
+  var collapseIPhoneAnswer = (rich, anchor, animated = true) => {
     return changeIPhoneAnswer(rich, () => {
       const top = anchor?.getBoundingClientRect().top;
       if (iPhoneAutoCollapse?.rich === rich) resetIPhoneAutoCollapse();
@@ -1284,7 +1298,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         if (iPhoneAnswerMotion?.updating) iPhoneAnswerMotion.anchors.push(restore);
         else requestAnimationFrame(restore);
       }
-    });
+    }, animated);
   };
   var syncIPhoneAnswerFocus = () => {
     if (!isIPhoneLayout) return;

@@ -245,7 +245,11 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(smallCommentsOpen, false, 'Short comments close without a native bottom close button');
   // Auto-collapse arms only inside the reading band; comments and stale observers cannot close it.
   let autoOpen = true, autoComments = false, autoCloses = 0, rowTop = 500, nextTop = 900;
-  const autoFrames = [], autoScrolls = [], autoObservers = [];
+  const autoFrames = [], autoScrolls = [], autoObservers = [], autoClasses = new Set();
+  const flushAutoFrames = () => {
+    while (autoFrames.length) autoFrames.shift()();
+    assert.equal(autoClasses.size, 0, 'Instant collapse must restore normal CSS transitions');
+  };
   const nextRow = { isConnected: true, getClientRects: () => [1], getBoundingClientRect: () => ({ top: nextTop }) };
   const autoRow = { isConnected: true, nextElementSibling: nextRow, classList: { add() {}, remove() {} },
     querySelector: selector => selector === ':scope > .RichContent' ? autoRich : null,
@@ -260,7 +264,10 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
     querySelector: selector => selector.includes('retract') ? { click() { autoCloses++; autoOpen = false; rowTop += 100; nextTop -= 900; } }
       : selector.includes('action-host') ? autoHost : selector.includes('action-dock') ? autoDock
       : selector.includes('ChatBubble') ? autoComment : selector === '.ContentItem-actions' ? autoActions : null };
-  const autoAPI = load('iPhone Safari', 5, 402, 874, { querySelectorAll: () => autoOpen ? [autoRich] : [] }, {
+  const autoAPI = load('iPhone Safari', 5, 402, 874, {
+    documentElement: { classList: { add: c => autoClasses.add(c), remove: c => autoClasses.delete(c) }, getBoundingClientRect: () => ({}) },
+    querySelectorAll: () => autoOpen ? [autoRich] : []
+  }, {
     window: { addEventListener() {}, scrollBy: (x, y) => autoScrolls.push(y) },
     requestAnimationFrame: callback => autoFrames.push(callback),
     getComputedStyle: node => { assert.equal(node, autoHost); return { bottom: '12px' }; },
@@ -279,14 +286,16 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   autoAPI.syncIPhoneAnswerFocus();autoAPI.syncIPhoneAutoCollapse();
   let autoObserver = autoObservers.at(-1);
   assert.equal(autoObserver.options.rootMargin, '-180px 0px -6px 0px');
+  autoRow.animate = () => assert.fail('Boundary collapse must not start WAAPI even when supported');
   autoObserver.emit(860, 920);assert.equal(autoCloses, 0, 'Opening outside the band must stay open');
   autoObserver.emit(802, 862);autoObserver.emit(808, 868);assert.equal(autoCloses, 0, 'Allow small bottom drift');
   autoObserver.emit(809, 869);assert.equal(autoCloses, 1);assert.ok(autoObserver.disconnected);
   autoObserver.emit(850, 910);assert.equal(autoCloses, 1, 'Ignore queued callbacks after collapse');
-  autoFrames.shift()();assert.equal(autoScrolls.at(-1), 100, 'Preserve the current card at the lower edge');
+  assert.ok(autoClasses.has('jimi-answer-instant'));
+  flushAutoFrames();assert.equal(autoScrolls.at(-1), 100, 'Preserve the current card at the lower edge');
   autoObserver = reopenAuto();autoObserver.emit(300, 360);autoObserver.emit(180, 240);assert.equal(autoCloses, 1);
   autoObserver.emit(179, 239);assert.equal(autoCloses, 2);
-  autoFrames.shift()();assert.equal(autoScrolls.at(-1), -900, 'Preserve the following card at the upper edge');
+  flushAutoFrames();delete autoRow.animate;assert.equal(autoScrolls.at(-1), -900, 'Preserve the following card at the upper edge');
   autoObserver = reopenAuto();autoObserver.emit(802, 862);
   autoAPI.trackIPhoneCommentAnswer({ isTrusted: true, target: { closest: () => autoComment }, preventDefault() {}, stopImmediatePropagation() {} });
   assert.equal(autoCloses, 2, 'Docking before the native comment handler must not close the answer');
@@ -294,7 +303,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   autoObserver.emit(300, 360);autoObserver.emit(12, 72);assert.equal(autoCloses, 2, 'Reading comments suspends auto-collapse');
   autoComment.click();autoObserver.emit(12, 72);assert.equal(autoCloses, 2, 'Closing comments must not immediately close the answer');
   autoObserver.emit(300, 360);autoObserver.emit(179, 239);assert.equal(autoCloses, 3);
-  autoFrames.shift()();
+  flushAutoFrames();
   autoObserver = reopenAuto();autoObserver.emit(802, 862);
   autoActions = { querySelector: () => autoComment };autoAPI.syncIPhoneAutoCollapse();
   const replacementObserver = autoObservers.at(-1);assert.ok(autoObserver.disconnected);
@@ -308,6 +317,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   autoRich.isConnected = true;autoObserver = reopenAuto();autoObserver.emit(802, 862);
   autoActions = { querySelector: () => autoComment };autoAPI.syncIPhoneAutoCollapse();
   autoObservers.at(-1).emit(179, 239);assert.equal(autoCloses, 5, 'Preserve an armed boundary across native toolbar replacement');
+  flushAutoFrames();
   // Expanded footer uses current author data without replacing native actions or duplicating itself.
   let footerAuthor, authorCreates = 0, footerChanged, observedAnswers = 0;
   const profile = { textContent: '作者甲', getAttribute: () => '/people/author' };
