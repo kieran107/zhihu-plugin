@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.25
+// @version      1.26
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -556,13 +556,17 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) #JIMI_SAFARI_TINT {
         background-image: var(--jimi-canvas-top); background-size: 100% 96px; background-repeat: no-repeat;
       }
-      html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
+      html.jim-iphone.jimi-compact-feed .Topstory {
+        position: relative; isolation: isolate;
+        --jimi-grid-size: calc(100vw / 20);
+        --jimi-grid-tail: mod(calc(100% - 96px), var(--jimi-grid-size));
+      }
+      html.jim-iphone.jimi-compact-feed .Topstory-mainColumnCard { box-shadow: none !important; }
       /* 横线按透视递密，但最小间距为 1.5px，继续画到尖端；不截断、不填灰，避免空白与混叠。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
         box-shadow: inset 0 -1px 0 var(--jimi-grid-line);
-        --jimi-grid-size: calc(100vw / 20);
-        bottom: mod(calc(100% - 96px), var(--jimi-grid-size));
+        bottom: var(--jimi-grid-tail);
         background:
           var(--jimi-canvas-top) center top / 100% 96px no-repeat,
           linear-gradient(to right, var(--jimi-grid-line) .75px, transparent .75px) 0 96px / var(--jimi-grid-size) var(--jimi-grid-size),
@@ -579,8 +583,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         display: none; align-items: center; justify-content: center;
       }
       html.jimi-compact-feed .jimi-feed-intro:has(+ .Topstory-recommend) { display: block; height: 240px; padding: 0; pointer-events: none; }
-      /* 介绍区只占位，文字印在底板层，让实色卡片从上方经过。 */
-      html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint) {
+      /* 首尾只占位，文字印在底板层，让实色卡片从上方经过。 */
+      html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint),
+      html.jimi-compact-feed .jimi-feed-outro > span {
         position: fixed; left: 0; right: 0; z-index: -1; pointer-events: none; user-select: none;
         display: flex; align-items: center; justify-content: center; color: var(--jimi-imprint-ink);
       }
@@ -589,10 +594,12 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-compact-feed .jimi-feed-refresh-hint span { font-size: 20px; }
       html.jimi-compact-feed .jimi-feed-brand { margin: 0; color: inherit; font-size: 42px; line-height: 1.25; font-weight: 650; letter-spacing: 1px; }
       html.jimi-compact-feed .jimi-feed-tagline { margin: 0; font-size: 18px; line-height: 26px; letter-spacing: 2px; }
+      html.jimi-compact-feed .jimi-feed-outro > span { bottom: var(--jimi-grid-tail); height: 120px; }
       @media (prefers-reduced-motion: reduce) {
         html.jim-iphone #JIMI_SAFARI_TINT { background-image: none !important; }
         html.jim-iphone.jimi-compact-feed .Topstory::before,
-        html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint) { position: absolute; }
+        html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint),
+        html.jimi-compact-feed .jimi-feed-outro > span { position: absolute; }
       }
       html.jimi-compact-feed .Topstory-recommend.jimi-batch-full + .jimi-feed-outro { display: flex; height: 120px; font-size: 13px; line-height: 20px; letter-spacing: 1px; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) {
@@ -991,7 +998,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (hasAnswers && !root.nextElementSibling?.classList.contains('jimi-feed-outro')) {
       const outro = document.createElement('footer');
       outro.className = 'jimi-feed-outro';
-      outro.textContent = '已到底部了';
+      outro.innerHTML = '<span>已到底部了</span>';
       root.after(outro);
     }
     for (const target of iPhoneAvatarTargets) {
