@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.8
+// @version      1.9
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -517,7 +517,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
         --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.28%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #a9afb8; --jimi-bar-shadow: 0 6px 18px #18243829, inset 0 1px 0 #fff; --jimi-slot-bg: #e6e8ed; --jimi-slot-shadow: inset 0 3px 8px #18243824, inset 0 -1px 0 #fff;
+        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 8px #1824381a, 0 5px 16px #18243833, 0 12px 28px -8px #1824383d, inset 0 1px 0 #fff; --jimi-slot-bg: linear-gradient(180deg, #d7dbe1, #eceef1); --jimi-slot-shadow: inset 0 2px 4px #1824383d, inset 0 6px 12px #1824381f, inset 0 -1px 2px #fff, 0 1px 0 #fff;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
         --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
       }
@@ -526,7 +526,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
         --jimi-feed-canvas: #101113; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.19%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #292a2c; --jimi-bar-border: #65686e; --jimi-bar-shadow: 0 6px 20px #0008, inset 0 1px 0 #ffffff18; --jimi-slot-bg: #101113; --jimi-slot-shadow: inset 0 3px 9px #000b, inset 0 -1px 0 #ffffff12;
+        --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 10px #0006, 0 5px 18px #0009, 0 12px 28px -8px #000c, inset 0 1px 0 #ffffff12; --jimi-slot-bg: linear-gradient(180deg, #0b0c0e, #141517); --jimi-slot-shadow: inset 0 2px 5px #000d, inset 0 6px 12px #0008, inset 0 -1px 2px #ffffff14, 0 1px 0 #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
@@ -631,16 +631,16 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
       html.jim-iphone :is(.jimi-iphone-collapse, .jimi-action-dock) { display: none; }
-      html.jim-iphone .RichContent:not(.is-collapsed):has(> .jimi-action-dock) { position: relative; padding-bottom: 4px; }
+      html.jim-iphone .RichContent:not(.is-collapsed):has(> .jimi-action-dock) { position: relative; padding-bottom: 2px; }
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-dock {
-        display: block; position: absolute; bottom: 0; left: -4px; right: -4px; height: 78px; border-radius: 40px;
+        display: block; position: absolute; bottom: 0; left: -2px; right: -2px; height: 64px; border-radius: 20px;
         background: var(--jimi-slot-bg); box-shadow: var(--jimi-slot-shadow);
         scroll-margin-top: max(12px, env(safe-area-inset-top)); pointer-events: none;
       }
       /* 外壳属于当前正文，原生按钮仍留在 React 的原位置；sticky 在正文边界内自然归位。 */
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-host {
         position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
-        height: 70px; margin: 22px 0 0; padding: 0; overflow: visible;
+        height: 60px; margin: 22px 0 0; padding: 0; overflow: visible;
       }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
         box-sizing: border-box; max-width: 100%; width: auto !important;
@@ -656,8 +656,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions + .Sticky--holder { display: none !important; }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions {
         display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
-        width: 100% !important; height: 70px !important; padding: 6px !important; margin: 0 !important;
-        border: 1px solid var(--jimi-bar-border) !important; border-radius: 36px; overflow: visible;
+        width: 100% !important; height: 60px !important; padding: 5px !important; margin: 0 !important;
+        border: 1px solid var(--jimi-bar-border) !important; border-radius: 18px; overflow: visible;
         background: var(--jimi-bar-bg) !important; box-shadow: var(--jimi-bar-shadow) !important;
       }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) > .ContentItem-actions.jimi-action-host {
@@ -665,8 +665,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed):not(:has(button[data-zop-retract-question="true"])) .ContentItem-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :is(.jimi-answer-author, .jimi-iphone-collapse, :has(.VoteButton), :has(.Zi--Comment, .ZDI--ChatBubbleFill24)) {
-        grid-row: 1; box-sizing: border-box; min-width: 0; width: 100%; height: 56px; margin: 0 !important;
-        padding: 0 4px; border: 0 !important; border-radius: 28px;
+        grid-row: 1; box-sizing: border-box; min-width: 0; width: 100%; height: 48px; margin: 0 !important;
+        padding: 0 4px; border: 0 !important; border-radius: 12px;
         background: transparent !important; color: var(--jimi-feed-text); box-shadow: none;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
@@ -675,8 +675,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .AnswerItem .ContentItem-actions > :has(.VoteButton) > span { display: block; height: 100%; }
       html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton:not(.VoteButton--down), button:has(.Zi--Comment, .ZDI--ChatBubbleFill24), .jimi-iphone-collapse) {
         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
-        box-sizing: border-box; width: 100%; height: 56px; min-height: 44px !important; margin: 0; padding: 0 4px;
-        border: 0 !important; border-radius: 28px; background: transparent !important;
+        box-sizing: border-box; width: 100%; height: 48px; min-height: 44px !important; margin: 0; padding: 0 4px;
+        border: 0 !important; border-radius: 12px; background: transparent !important;
         color: var(--jimi-feed-text); font-size: 0; line-height: 0; cursor: pointer; touch-action: manipulation;
       }
       html.jim-iphone .AnswerItem .ContentItem-actions :is(.VoteButton, button:has(.Zi--Comment, .ZDI--ChatBubbleFill24)) > span:has(svg) { display: none !important; }
@@ -685,7 +685,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
       }
       html.jim-iphone .AnswerItem .ContentItem-actions button[data-jimi-label]::before {
-        content: ""; display: block; width: 25px; height: 25px; margin-bottom: 3px; background: currentColor;
+        content: ""; display: block; width: 23px; height: 23px; margin-bottom: 2px; background: currentColor;
         -webkit-mask: var(--jimi-action-icon) center / contain no-repeat; mask: var(--jimi-action-icon) center / contain no-repeat;
       }
       html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%2010H3v11h4m0-11%204-8h2v6h5a3%203%200%200%201%203%203l-1%207a3%203%200%200%201-3%203H7V10Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
