@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.28
+// @version      1.29
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -84,7 +84,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       "homeContentOpen": "0",
       "linkShopping": "2",
       "replaceZhidaToSearch": "removeLink",
-      "videoInAnswerArticle": "0",
+      "videoInAnswerArticle": "2",
       "hiddenAD": true,
       "hiddenQuestionAD": true,
       "removeTopAD": true,
@@ -2637,6 +2637,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var CLASS_VIDEO_ONE = ".css-1h1xzpn";
   var CLASS_VIDEO_TWO = ".VideoAnswerPlayer-video";
   var CLASS_VIDEO_TWO_BOX = ".VideoAnswerPlayer";
+  var ANSWER_VIDEO_SELECTOR = "video, .video-box, .VideoAnswerPlayer, [data-video-id]";
+  var answerHasVideo = (answer) => !!(answer.attachment?.video || /<video\b|<[^>]+\bdata-video-id\s*=|<[^>]+\bclass\s*=\s*["'][^"']*\b(?:video-box|VideoAnswerPlayer)\b/i.test(answer.content || ""));
   var NEED_LINK_CLASS = [CLASS_VIDEO_ONE, CLASS_VIDEO_TWO];
   var initVideoDownload = async (nodeFound) => {
     if (!nodeFound) return;
@@ -2983,11 +2985,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     const removeAnswerMap = new Map(removeAnswers.map((item) => [String(item.id), item.message]));
     const config = await myStorage.getConfig();
     const {
-      removeFromYanxuan,
       removeUnrealAnswer,
       removeFromEBook,
       removeAnonymousAnswer,
       removeLessVoteDetail,
+      videoInAnswerArticle,
       lessVoteNumberDetail = 0,
       answerOpen = "default" /* 默认 */,
       removeBlockUserContent,
@@ -3017,10 +3019,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       const blockedUser = blockedUserMap.get(String(dataCardContent.author_member_hash_id || ""));
       const blockedUserToReplace = replaceBlockUserContentWithStar ? blockedUser : void 0;
       !blockedUserToReplace && (dataCardContent["upvote_num"] || 0) < lessVoteNumberDetail && removeLessVoteDetail && (message2 = `过滤低赞回答: ${dataCardContent["upvote_num"]}赞`);
-      if (!message2 && !blockedUserToReplace && removeFromYanxuan) {
+      if (!message2 && !blockedUserToReplace) {
         const itemId = String(dataZop.itemId || "");
         const findMessage = removeAnswerMap.get(itemId);
         findMessage && (message2 = findMessage);
+      }
+      if (!message2 && videoInAnswerArticle === "2" && nodeItemContent.querySelector(".RichContent")?.querySelector(ANSWER_VIDEO_SELECTOR)) {
+        message2 = "已过滤一条包含视频的回答";
       }
       if (!message2 && !blockedUserToReplace) {
         const nodeTag1 = nodeItem.querySelector(".KfeCollection-AnswerTopCard-Container");
@@ -3127,6 +3132,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       filterKeywords = [],
       blockWordsAnswer = [],
       removeItemAboutVideo,
+      videoInAnswerArticle,
       removeItemAboutPin,
       removeItemAboutArticle,
       removeLessVote,
@@ -3205,6 +3211,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         message2 = `已删除黑名单用户${blockedUser.name}发布的内容：${title}`;
       }
       !message2 && !blockedUserToReplace && isVideo && removeItemAboutVideo && (message2 = `列表屏蔽视频：${title}`);
+      if (!message2 && videoInAnswerArticle === "2" && nodeContentItem.classList.contains("AnswerItem") && nodeContentItem.querySelector(".RichContent")?.querySelector(ANSWER_VIDEO_SELECTOR)) {
+        message2 = `已过滤包含视频的回答：${title}`;
+      }
       !message2 && !blockedUserToReplace && isArticle && removeItemAboutArticle && (message2 = `列表屏蔽文章：${title}`);
       !message2 && !blockedUserToReplace && isTip && removeItemAboutPin && (message2 = `列表屏蔽想法`);
       if (!message2 && !blockedUserToReplace && removeLessVote && (cardContent["upvote_num"] || 0) < lessVoteNumber) {
@@ -3527,8 +3536,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         if (removeAnonymousQuestion && target.question && target.question.author && !target.question.author.id) {
           message2 = "匿名用户的提问";
         }
-        if (videoInAnswerArticle === "2" /* 隐藏视频 */ && target.attachment && target.attachment.video) {
-          message2 = "已删除一条视频回答";
+        if (videoInAnswerArticle === "2" /* 隐藏视频 */ && answerHasVideo(target)) {
+          message2 = "已过滤一条包含视频的回答";
         }
         if (message2) {
           const id = String(item.target.id);
@@ -3577,8 +3586,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         if (removeFromYanxuan && item.answerType === "paid" && item.labelInfo) {
           message2 = "已删除一条选自盐选专栏的回答";
         }
-        if (videoInAnswerArticle === "2" /* 隐藏视频 */ && item.attachment && item.attachment.video) {
-          message2 = "已删除一条视频回答";
+        if (videoInAnswerArticle === "2" /* 隐藏视频 */ && answerHasVideo(item)) {
+          message2 = "已过滤一条包含视频的回答";
         }
         if (message2) {
           this.removeAnswerMap.set(String(item.id), message2);

@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -146,6 +146,27 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   feedAPI.myStorage.getHistory = () => assert.fail('Disabled history must not read GM storage');
   await feedAPI.processingData2([{ scrollHeight: 0, querySelector: () => null, classList: { contains: () => false, add: () => { markedIncomplete = true; } } }]);
   assert.equal(markedIncomplete, false);
+  // Video attachments and embedded players filter the whole answer, never ordinary images or prose.
+  assert.equal(preset.script.videoInAnswerArticle, '2');
+  const videoAnswers = [
+    { id: 'attachment', attachment: { video: { id: 'v1' } } },
+    { id: 'html-video', content: '<p>正文</p><video src="movie.mp4"></video>' },
+    { id: 'embedded', content: '<a class="video-box" data-video-id="v2">视频</a>' },
+    { id: 'player', content: '<div class="VideoAnswerPlayer">播放器</div>' }
+  ];
+  const textAnswers = [
+    { id: 'empty' }, { id: 'no-video', attachment: { video: null } },
+    { id: 'photo', content: '<p>聊聊视频</p><img src="video-cover.jpg"><a href="/video/tutorial">文字链接</a>' },
+    { id: 'code', content: '<code>&lt;video src="demo"&gt;</code>' }
+  ];
+  for (const answer of videoAnswers) assert.equal(feedAPI.answerHasVideo(answer), true);
+  for (const answer of textAnswers) assert.equal(feedAPI.answerHasVideo(answer), false);
+  const mixedAnswers = [...videoAnswers, ...textAnswers];
+  await feedAPI.store.findRemoveRecommends(mixedAnswers.map(target => ({ target })));
+  await feedAPI.store.findRemoveAnswers(mixedAnswers);
+  for (const blocked of [feedAPI.store.getRemoveRecommends(), feedAPI.store.getRemoveAnswers()]) {
+    assert.deepEqual(Array.from(blocked, row => row.id), videoAnswers.map(row => row.id));
+  }
   // Keep native actions in their wrapper; recreate only our dock/collapse after a native rerender.
   let clicks = 0, button, dock, placements = 0;
   let nativeButton = { click: () => { throw new Error('Stale native button'); } };

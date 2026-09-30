@@ -1,6 +1,6 @@
 # 吉姆的知乎 · iPhone Safari：参数说明
 
-适用：iPhone 16 Pro 的 Safari，知乎开启「请求桌面网站」。当前版本：`1.28`。上游基线：知乎修改器网页端 5.21.4；旧移动端 2.9.4 仅参考隐藏 App 引导等显示方式。来源及许可见 [第三方说明](THIRD_PARTY_NOTICES.md)。
+适用：iPhone 16 Pro 的 Safari，知乎开启「请求桌面网站」。当前版本：`1.29`。上游基线：知乎修改器网页端 5.21.4；旧移动端 2.9.4 仅参考隐藏 App 引导等显示方式。来源及许可见 [第三方说明](THIRD_PARTY_NOTICES.md)。
 
 加载优化：主题、字号和隐藏规则在读取扩展存储前生效；推荐卡片先过滤、排版再显示，介绍区随首批回答出现。`saveHistory: false` 时不读取历史存储。已删除设置面板的闲置菜单、表单和专用样式，参数仍只在本文件调整。
 
@@ -19,7 +19,7 @@
 来源：`知乎编辑器配置-20260928-132254-1790572974116.txt`，原导出文件未修改。除下列手机适配外，导出配置全部写入下方 JSON；时间戳 `t` 不是偏好，不导入。
 
 - 隐藏页头、Logo 及多余侧栏；页头中的搜索和导航也随之隐藏。需要恢复时将 `hiddenHeader` 改为 `false`。
-- 过滤视频、文章、想法、提问卡片、广告、盐选、电子书及低于 100 赞的列表内容；问题详情中的低赞回答过滤保持关闭。
+- 过滤视频、正文包含视频的回答、文章、想法、提问卡片、广告、盐选、电子书及低于 100 赞的列表内容；被过滤的回答不占每轮 10 条名额，问题详情中的低赞回答过滤保持关闭。
 - 导入 5 个标题关键词和 43 条“不感兴趣”记录；这些导入记录只用于本地过滤，不会自动向知乎补发反馈。保留额外“不感兴趣”按钮，手动点击才会提交反馈。
 - 自动跟随设备浅色／深色模式（`theme: "2"`），设备切换后页面直接更新，无需刷新；不增加调节图标、开关或设置入口。原作主题配色参数保留。
 - 推荐每轮最多显示 10 条有效内容，满额后停止向下加载；底部没有刷新手势或操作按钮，继续上划只保留浏览器自然回弹，露出相同的页面底色。顶部增加 240px 背景区，显示「↑ 上拉刷新」、大字项目标题「吉姆的知乎」与「安静地阅读」；10 条满额后最后一张卡片下增加 120px 背景结束区，显示「已到底部了」。首尾为静态文字，不创建刷新按钮或自定义手势。回到页面顶部使用 Safari 原生下拉刷新，可能出现重复推荐。只作用于首页推荐，关注、热榜、问题详情不分页。
@@ -67,7 +67,7 @@
 | `script.filterKeywords` / `blockWordsAnswer` | 标题／内容过滤词，例 `["关键词一", "关键词二"]`。沿用原作正则匹配；空数组不过滤，非法正则会被忽略 |
 | `script.linkShopping` | `"0"` 原样，`"1"` 仅文字，`"2"` 隐藏购物链接 |
 | `script.replaceZhidaToSearch` | 当前 `"removeLink"` 将知乎直达保留为文字；`"default"` 恢复原样。展开回答的其他正文链接也不可跳转 |
-| `script.videoInAnswerArticle` | `"0"` 原样，`"1"` 改成链接，`"2"` 隐藏视频／过滤视频回答 |
+| `script.videoInAnswerArticle` | 当前 `"2"`，过滤带视频附件或正文内嵌视频的回答；文章内视频隐藏。`"0"` 原样，`"1"` 改成链接 |
 | `script.copyAnswerLink` | 显示复制回答链接按钮 |
 | `script.listItemCreatedAndModifiedTime` | 列表摘要是否额外显示时间；当前关闭节省空间 |
 | `script.answerItemCreatedAndModifiedTime` / `questionCreatedAndModifiedTime` / `articleCreateTimeToTop` | 回答／问题／文章顶部时间 |
@@ -116,7 +116,7 @@
     "homeContentOpen": "0",
     "linkShopping": "2",
     "replaceZhidaToSearch": "removeLink",
-    "videoInAnswerArticle": "0",
+    "videoInAnswerArticle": "2",
     "hiddenAD": true,
     "hiddenQuestionAD": true,
     "removeTopAD": true,
