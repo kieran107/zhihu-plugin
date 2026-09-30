@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.14
+// @version      1.15
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -522,9 +522,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
-        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-grid-line: #8b94a059;
-        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M133.33%2032H266.67M66.67%2064H333.33M0.00%2096H400.00%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M133.33%2032H266.67M66.67%2016H333.33M0.00%200H400.00%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-grid-line: #8b94a059; --jimi-imprint-ink: #92969c;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M148.94%2024.51H251.06M151.52%2023.27H248.48M153.85%2022.15H246.15M155.96%2021.14H244.04M157.89%2020.21H242.11M159.66%2019.36H240.34M161.29%2018.58H238.71M162.79%2017.86H237.21M164.18%2017.19H235.82M165.47%2016.58H234.53M166.67%2016.00H233.33M167.79%2015.46H232.21M168.83%2014.96H231.17M169.81%2014.49H230.19M170.73%2014.05H229.27M171.60%2013.63H228.40M172.41%2013.24H227.59M173.18%2012.87H226.82M173.91%2012.52H226.09M174.60%2012.19H225.40M175.26%2011.88H224.74M175.88%2011.58H224.12M176.47%2011.29H223.53M177.03%2011.02H222.97M177.57%2010.77H222.43%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M0.00%200.00H400.00M58.82%2014.12H341.18M90.91%2021.82H309.09M111.11%2026.67H288.89M125.00%2030.00H275.00M135.14%2032.43H264.86M142.86%2034.29H257.14M148.94%2035.74H251.06M153.85%2036.92H246.15M157.89%2037.89H242.11M161.29%2038.71H238.71M164.18%2039.40H235.82M166.67%2040.00H233.33M168.83%2040.52H231.17M170.73%2040.98H229.27M172.41%2041.38H227.59M173.91%2041.74H226.09M175.26%2042.06H224.74M176.47%2042.35H223.53M177.57%2042.62H222.43%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 6px #18243824, 0 0 20px #18243833; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
         --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
@@ -533,16 +533,16 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
-        --jimi-feed-canvas: #101113; --jimi-grid-line: #aab4c53d;
-        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M133.33%2032H266.67M66.67%2064H333.33M0.00%2096H400.00%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M133.33%2032H266.67M66.67%2016H333.33M0.00%200H400.00%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-feed-canvas: #101113; --jimi-grid-line: #aab4c53d; --jimi-imprint-ink: #737880;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M148.94%2024.51H251.06M151.52%2023.27H248.48M153.85%2022.15H246.15M155.96%2021.14H244.04M157.89%2020.21H242.11M159.66%2019.36H240.34M161.29%2018.58H238.71M162.79%2017.86H237.21M164.18%2017.19H235.82M165.47%2016.58H234.53M166.67%2016.00H233.33M167.79%2015.46H232.21M168.83%2014.96H231.17M169.81%2014.49H230.19M170.73%2014.05H229.27M171.60%2013.63H228.40M172.41%2013.24H227.59M173.18%2012.87H226.82M173.91%2012.52H226.09M174.60%2012.19H225.40M175.26%2011.88H224.74M175.88%2011.58H224.12M176.47%2011.29H223.53M177.03%2011.02H222.97M177.57%2010.77H222.43%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M0.00%200.00H400.00M58.82%2014.12H341.18M90.91%2021.82H309.09M111.11%2026.67H288.89M125.00%2030.00H275.00M135.14%2032.43H264.86M142.86%2034.29H257.14M148.94%2035.74H251.06M153.85%2036.92H246.15M157.89%2037.89H242.11M161.29%2038.71H238.71M164.18%2039.40H235.82M166.67%2040.00H233.33M168.83%2040.52H231.17M170.73%2040.98H229.27M172.41%2041.38H227.59M173.91%2041.74H226.09M175.26%2042.06H224.74M176.47%2042.35H223.53M177.57%2042.62H222.43%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 8px #0009, 0 0 22px #000b; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
-      /* 20 列方格与上下扁金字塔逐列对齐；端部高度不超过对应留白的一半。 */
+      /* 20 列方格逐列接入直线透视面；横线按 y = H² / (H + 20n) 投影，间距小于 .25px 时停止绘制。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
         --jimi-grid-size: calc(100vw / 20);
@@ -555,9 +555,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone.jimi-compact-feed .Topstory :is(.Topstory-container, .Topstory-mainColumn,
         .Topstory-mainColumnCard, .Topstory-content, .Topstory-recommend, .Topstory-follow, #TopstoryContent,
         .ListShortcut, .jimi-feed-intro, .jimi-feed-outro) { background: transparent !important; }
-      @media (prefers-reduced-motion: reduce) {
-        html.jim-iphone.jimi-compact-feed .Topstory::before { position: absolute; }
-      }
       html.jim-iphone.jimi-compact-feed .Topstory-container { margin-top: 0 !important; padding-top: 12px !important; }
       html.jim-iphone.jimi-compact-feed .Topstory-container:has(.Topstory-recommend) { padding-top: 0 !important; }
       html.jimi-compact-feed :is(.jimi-feed-intro, .jimi-feed-outro) {
@@ -565,11 +562,21 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color: var(--jimi-feed-muted); padding: 20px 27px; margin: 0;
         display: none; align-items: center; justify-content: center;
       }
-      html.jimi-compact-feed .jimi-feed-intro:has(+ .Topstory-recommend) { display: flex; flex-direction: column; height: 240px; }
-      html.jimi-compact-feed .jimi-feed-refresh-hint { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; line-height: 20px; }
+      html.jimi-compact-feed .jimi-feed-intro:has(+ .Topstory-recommend) { display: block; height: 240px; padding: 0; pointer-events: none; }
+      /* 介绍区只占位，文字印在底板层，让实色卡片从上方经过。 */
+      html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint) {
+        position: fixed; left: 0; right: 0; z-index: -1; pointer-events: none; user-select: none;
+        display: flex; align-items: center; justify-content: center; color: var(--jimi-imprint-ink);
+      }
+      html.jimi-compact-feed .jimi-feed-imprint { top: 96px; height: 144px; flex-direction: column; gap: 6px; }
+      html.jimi-compact-feed .jimi-feed-refresh-hint { top: 58px; gap: 6px; margin: 0; font-size: 14px; line-height: 24px; }
       html.jimi-compact-feed .jimi-feed-refresh-hint span { font-size: 20px; }
-      html.jimi-compact-feed .jimi-feed-brand { margin: auto 0 6px; color: var(--jimi-feed-text); font-size: 32px; line-height: 1.3; font-weight: 650; letter-spacing: 1px; }
-      html.jimi-compact-feed .jimi-feed-tagline { margin: 0 0 auto; font-size: 13px; line-height: 20px; }
+      html.jimi-compact-feed .jimi-feed-brand { margin: 0; color: inherit; font-size: 42px; line-height: 1.25; font-weight: 650; letter-spacing: 1px; }
+      html.jimi-compact-feed .jimi-feed-tagline { margin: 0; font-size: 18px; line-height: 26px; letter-spacing: 2px; }
+      @media (prefers-reduced-motion: reduce) {
+        html.jim-iphone.jimi-compact-feed .Topstory::before,
+        html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint) { position: absolute; }
+      }
       html.jimi-compact-feed .Topstory-recommend.jimi-batch-full + .jimi-feed-outro { display: flex; height: 120px; font-size: 13px; line-height: 20px; letter-spacing: 1px; }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) {
         margin: 0 12px 12px !important;
@@ -943,7 +950,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (hasAnswers && !root.previousElementSibling?.classList.contains('jimi-feed-intro')) {
       const intro = document.createElement('header');
       intro.className = 'jimi-feed-intro';
-      intro.innerHTML = '<p class="jimi-feed-refresh-hint"><span aria-hidden="true">↑</span>上拉刷新</p><h1 class="jimi-feed-brand">吉姆的知乎</h1><p class="jimi-feed-tagline">安静地读知乎</p>';
+      intro.innerHTML = '<p class="jimi-feed-refresh-hint"><span aria-hidden="true">↑</span>上拉刷新</p><div class="jimi-feed-imprint"><h1 class="jimi-feed-brand">吉姆的知乎</h1><p class="jimi-feed-tagline">安静地阅读</p></div>';
       root.before(intro);
     }
     if (hasAnswers && !root.nextElementSibling?.classList.contains('jimi-feed-outro')) {
