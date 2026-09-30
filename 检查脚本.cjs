@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -96,17 +96,46 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   // Auto theme follows the device preference without changing stored settings.
   assert.equal(preset.script.theme, '2');
   let systemDark = true;
-  const themeRoot = { setAttribute(name, value) { this[name] = value; } };
-  const themeAPI = load('iPhone Safari', 5, 402, 874, { querySelector: () => themeRoot }, {
+  let themeWrites = 0;
+  const themeRoot = { getAttribute(name) { return this[name]; }, setAttribute(name, value) { themeWrites++; this[name] = value; }, removeAttribute(name) { delete this[name]; } };
+  const themeAPI = load('iPhone Safari', 5, 402, 874, { documentElement: themeRoot, querySelector: () => themeRoot }, {
+    GM: { getValue: () => assert.fail('Visual presets must not wait for GM storage') },
     window: { addEventListener() {}, matchMedia: query => { assert.equal(query, '(prefers-color-scheme: dark)'); return { matches: systemDark }; } }
   });
-  assert.equal(await themeAPI.isDark(), true);
+  assert.equal(themeAPI.isDark(), true); // Synchronous even when storage is unavailable.
   await themeAPI.onUseThemeDark();
   assert.equal(themeRoot['data-theme'], 'dark');
+  themeAPI.onUseThemeDark();
+  assert.equal(themeWrites, 1, 'An unchanged theme must not trigger another mutation');
   systemDark = false;
   await themeAPI.onUseThemeDark();
   assert.equal(await themeAPI.isDark(), false);
   assert.equal(themeRoot['data-theme'], 'light');
+  // Fixed visual presets render synchronously and unchanged CSS never rewrites a style node.
+  const styles = new Map(); let styleWrites = 0;
+  const styleAPI = load('iPhone Safari', 5, 402, 874, {
+    documentElement: themeRoot, querySelector: () => themeRoot,
+    getElementById: id => styles.get(id),
+    head: { appendChild(node) { styles.set(node.id, node); } },
+    createElement: () => ({ get textContent() { return this.text; }, set textContent(value) { styleWrites++; this.text = value; } })
+  }, { location: { hostname: 'www.zhihu.com', pathname: '/', href: 'https://www.zhihu.com/', origin: 'https://www.zhihu.com' }, GM: { getValue: () => assert.fail('Styles must not wait for storage') }, window: { addEventListener() {}, matchMedia: () => ({ matches: true }) } });
+  styleAPI.mySize.init(); styleAPI.myBackground.init(); styleAPI.appendHiddenStyle();
+  assert.equal(styles.size, 3);
+  assert.ok([...styles.values()].every(node => node.textContent.length > 0));
+  const writes = styleWrites;
+  styleAPI.mySize.init(); styleAPI.myBackground.init(); styleAPI.appendHiddenStyle();
+  assert.equal(styleWrites, writes);
+  styleAPI.fnAppendStyle('JIMI_STYLE_VERSION', 'changed');
+  assert.equal(styleWrites, writes + 1);
+  // Incomplete React rows stay eligible for the next pass; disabled history never delays a feed.
+  let markedIncomplete = false;
+  const feedAPI = load('iPhone Safari', 5, 402, 874, {}, {
+    location: { hostname: 'www.zhihu.com', pathname: '/' },
+    window: { addEventListener() {}, matchMedia: () => ({ matches: true }) }
+  });
+  feedAPI.myStorage.getHistory = () => assert.fail('Disabled history must not read GM storage');
+  await feedAPI.processingData2([{ scrollHeight: 0, querySelector: () => null, classList: { contains: () => false, add: () => { markedIncomplete = true; } } }]);
+  assert.equal(markedIncomplete, false);
   // Keep native actions in their wrapper; recreate only our dock/collapse after a native rerender.
   let clicks = 0, button, dock, placements = 0;
   let nativeButton = { click: () => { throw new Error('Stale native button'); } };

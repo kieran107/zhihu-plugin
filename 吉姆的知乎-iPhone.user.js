@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.11
+// @version      1.12
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -360,11 +360,15 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     /iPhone|iPod/.test(navigator.userAgent) ||
     navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) <= 600
   );
+  var syncIPhonePageRoute = () => {
+    document.documentElement.classList.toggle("jimi-feed-route", isIPhoneLayout && /^\/(?:follow|hot)?$/.test(location.pathname));
+  };
   var initIPhoneLayout = () => {
     if (!isIPhoneLayout) return;
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
     window.addEventListener("click", trackIPhoneCommentAnswer, true);
     document.documentElement.classList.add("jim-iphone");
+    syncIPhonePageRoute();
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
     document.documentElement.classList.toggle("jimi-readonly-comments", IPHONE_PRESET.mobile.readOnlyComments);
     const viewportContent = "width=device-width, initial-scale=1, viewport-fit=cover";
@@ -390,9 +394,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         (document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#ffffff");
       for (const meta of colors) if (meta.content !== themeColor) meta.content = themeColor;
     };
-    setViewport();
-    // 知乎可能在脚本启动后插入或改写 viewport；保留手势缩放能力。
-    new MutationObserver(setViewport).observe(document.head, {
+    // 只响应相关 meta，避免知乎每次插入样式都强制读取布局。
+    new MutationObserver((changes) => {
+      const relevant = (node) => node.matches?.('meta[name="viewport"], meta[name="theme-color"]');
+      if (changes.some(change => relevant(change.target) || [...change.addedNodes, ...change.removedNodes].some(relevant))) setViewport();
+    }).observe(document.head, {
       childList: true, subtree: true, attributes: true, attributeFilter: ["name", "content"]
     });
     // 复用原作的系统主题监听，浏览器工具栏颜色跟随页面实际主题。
@@ -530,7 +536,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
-      html.jim-iphone.jimi-compact-feed:has(.Topstory) { --jimi-page-bg: var(--jimi-feed-canvas); }
+      html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
       /* 无缝斜向波纹固定在卡片下方，不监听滚动或拦截触摸。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
@@ -577,6 +583,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem),
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after { transition: none; }
       }
+      html.jimi-compact-feed .TopstoryItem:has(.AnswerItem > .RichContent.is-collapsed .ContentItem-more):not(.jimi-feed-item) { visibility: hidden; }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
       html.jim-iphone:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) .AnswerItem:not(.jimi-reading-answer) { opacity: .55; }
       html.jimi-compact-feed .jimi-feed-item :is(.FeedSource, .TopstoryItem-topic) { display: none !important; }
@@ -922,13 +929,15 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var syncIPhoneFeed = () => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.compactFeed) return;
     const root = document.querySelector('.Topstory-recommend');
-    if (root && !root.previousElementSibling?.classList.contains('jimi-feed-intro')) {
+    const hasAnswers = root?.querySelector('.TopstoryItem .AnswerItem');
+    // 首批回答到达后再插入首尾，避免 React 初次接管空列表时移除并重建。
+    if (hasAnswers && !root.previousElementSibling?.classList.contains('jimi-feed-intro')) {
       const intro = document.createElement('header');
       intro.className = 'jimi-feed-intro';
       intro.innerHTML = '<p class="jimi-feed-refresh-hint"><span aria-hidden="true">↑</span>上拉刷新</p><h1 class="jimi-feed-brand">吉姆的知乎</h1><p class="jimi-feed-tagline">安静地读知乎</p>';
       root.before(intro);
     }
-    if (root && !root.nextElementSibling?.classList.contains('jimi-feed-outro')) {
+    if (hasAnswers && !root.nextElementSibling?.classList.contains('jimi-feed-outro')) {
       const outro = document.createElement('footer');
       outro.className = 'jimi-feed-outro';
       outro.textContent = '已到底部了';
@@ -1195,81 +1204,18 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var fnLog = (...str) => console.log("%c「吉姆的知乎 · iPhone」", "color: green;font-weight: bold;", ...str);
   var fnAppendStyle = (id, innerHTML) => {
     const element = domById(id);
-    element ? element.innerHTML = innerHTML : document.head.appendChild(domC("style", { id, type: "text/css", innerHTML }));
+    if (element) {
+      if (element.textContent !== innerHTML) element.textContent = innerHTML;
+    } else document.head.appendChild(domC("style", { id, type: "text/css", textContent: innerHTML }));
   };
-  var fnDomReplace = (node, attrObjs) => {
-    if (!node) return;
-    for (let key in attrObjs) {
-      node[key] = attrObjs[key];
-    }
-  };
+
   var createButtonFontSize12 = (innerHTML, extraCLass = "", extra = {}) => domC("button", {
     innerHTML,
     className: `jimi-button ${extraCLass}`,
     style: "margin-left: 8px;font-size: 12px;",
     ...extra
   });
-  var OPTIONS_MAP = {
-    replaceZhidaToSearch: [
-      { label: "不替换", value: "default" /* 不替换 */ },
-      { label: "去除知乎直达跳转", value: "removeLink" /* 去除知乎直达跳转 */ },
-      { label: "知乎", value: "zhihu" /* 知乎 */ },
-      { label: "必应", value: "bing" /* 必应 */ },
-      { label: "百度", value: "baidu" /* 百度 */ },
-      { label: "谷歌", value: "google" /* 谷歌 */ }
-    ],
-    linkShopping: [
-      { label: "默认", value: "0" /* 默认 */ },
-      { label: "仅文字", value: "1" /* 仅文字 */ },
-      { label: "隐藏", value: "2" /* 隐藏 */ }
-    ],
-    answerOpen: [
-      { label: "默认", value: "default" /* 默认 */ },
-      { label: "收起长回答", value: "off" /* 收起长回答 */ },
-      { label: "自动展开所有回答", value: "on" /* 自动展开所有回答 */ }
-    ],
-    suspensionOpen: [
-      { label: "左右", value: "0" /* 左右 */ },
-      { label: "上下", value: "1" /* 上下 */ }
-    ],
-    zoomImageType: [
-      { label: "默认尺寸", value: "0" /* 默认尺寸 */ },
-      { label: "自定义尺寸", value: "2" /* 自定义尺寸 */ },
-      { label: "原图尺寸", value: "1" /* 原图尺寸 */ }
-    ],
-    zoomImageHeight: [
-      { label: "关闭", value: "0" /* 关闭 */ },
-      { label: "开启", value: "1" /* 开启 */ }
-    ],
-    zoomListVideoType: [
-      { label: "默认尺寸", value: "0" /* 默认尺寸 */ },
-      { label: "自定义尺寸", value: "2" /* 自定义尺寸 */ }
-    ],
-    videoInAnswerArticle: [
-      { label: "默认", value: "0" /* 默认 */ },
-      { label: "修改为链接", value: "1" /* 修改为链接 */ },
-      { label: "隐藏视频/过滤视频回答", value: "2" /* 隐藏视频 */ }
-    ],
-    homeContentOpen: [
-      { label: "默认", value: "0" /* 默认 */ },
-      { label: "自动展开内容", value: "1" /* 自动展开内容 */ }
-    ]
-  };
-  var SELECT_BASIS_SHOW = [
-    { label: "购物链接显示方式", value: "linkShopping" },
-    { label: '替换<span class="jimi-zhida">知乎直达<span>✦</span></span>为搜索', value: "replaceZhidaToSearch" },
-    { label: "回答和文章中的视频显示方式", value: "videoInAnswerArticle" },
-    { label: "问题页面 - 回答收起/展开状态", value: "answerOpen" },
-    { label: "用户主页 - 内容收起/展开状态", value: "homeContentOpen" }
-  ];
-  var createHTMLTooltip = (value) => `<span class="jimi-tooltip"><span>?</span><span>${value}</span></span>`;
-  var createHTMLRange = (v, min, max, unit = "") => `<div class="jimi-flex-wrap jimi-range-${v}">${`<span style="font-size: 12px;margin-right: 8px;">当前：<span id="${v}">0</span>${unit}</span><span style="margin-right: 2px;color: #757575;font-size: 12px;">${min}${unit}</span><input class="jimi-i" type="range" min="${min}" max="${max}" name="${v}" style="width: 200px" /><span style="margin-left: 2px;color: #757575;font-size: 12px;">${max}${unit}</span>`}</div>`;
-  var createHTMLFormBoxSwitch = (con) => con.map(
-    (item) => `<div class="jimi-form-box">${item.map(
-      ({ label, value, needFetch, tooltip }) => createHTMLFormItem({ label, value: `<input class="jimi-i jimi-switch" name="${value}" type="checkbox" value="on" />`, needFetch, tooltip })
-    ).join("")}</div>`
-  ).join("");
-  var createHTMLFormItem = ({ label, value, needFetch, tooltip, extraClass }) => `<div class="jimi-form-box-item${needFetch ? " jimi-fetch-intercept" : ""}${extraClass ? ` ${extraClass}` : ""}">${`<div>${label + (needFetch ? '<span class="jimi-need-fetch">（接口拦截已关闭，此功能无法使用）</span>' : "") + (tooltip ? createHTMLTooltip(tooltip) : "")}</div><div>${value}</div>`}</div>`;
+
   var myPreview = {
     open: function(src, even, isVideo) {
       const nameDom = isVideo ? this.evenPathVideo : this.evenPathImg;
@@ -1326,131 +1272,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
     }
   };
-  var SELECTOR_RIGHT_ANCHOR = "#JIMI_DIALOG_RIGHT_ANCHOR";
-  var CLASS_RIGHT_ANCHOR_ITEM = "jimi-right-anchor-item";
-  var CLASS_RIGHT_ANCHOR_TARGET = "target";
-  var initMenu = (domMain) => {
-    const { hash } = location;
-    const arrayHash = [...domA("#JIMI_DIALOG_MENU>div", domMain)].map((i) => i.dataset.href || "");
-    const chooseId = arrayHash.find((i) => i === hash || hash.replace(i, "") !== hash);
-    fnChangeMenu(dom(`#JIMI_DIALOG_MENU>div[data-href="${chooseId || arrayHash[0]}"]`, domMain), domMain);
-  };
-  var onChangeMenu = (event) => {
-    const target = event.target;
-    const dataHref = target.dataset.href || "";
-    if (dataHref) {
-      location.hash = dataHref;
-      fnChangeMenu(target, document.body);
-      return;
-    }
-  };
-  var fnChangeMenu = (target, domMain) => {
-    const currentHref = target.dataset.href || "";
-    const chooseId = currentHref.replace(/#/, "");
-    if (!chooseId) return;
-    domA("#JIMI_DIALOG_MENU>div", domMain).forEach((item) => item.classList.remove("target"));
-    domA("#JIMI_DIALOG_MAIN>div", domMain).forEach((item) => item.style.display = chooseId === item.id ? "block" : "none");
-    domA(".jimi-right-title-content>div", domMain).forEach((item) => item.style.display = currentHref === item.dataset.id ? "block" : "none");
-    const nodeMain = dom("#JIMI_DIALOG_MAIN", domMain);
-    nodeMain && (nodeMain.scrollTop = 0);
-    target.classList.add("target");
-    updateRightTitleAnchor(domMain);
-  };
-  var createHTMLRightTitle = (domMain = document.body) => {
-    const { hash } = location;
-    const arr = [...dom("#JIMI_DIALOG_MENU", domMain).childNodes].map((item) => {
-      const itemDom = item;
-      return {
-        name: itemDom.textContent,
-        commit: itemDom.dataset.commit || "",
-        href: itemDom.dataset.href || ""
-      };
-    });
-    dom(".jimi-right-title-content", domMain).innerHTML = arr.map(
-      ({ name, commit, href }, index2) => `<div data-id="${href}" style="display: ${!hash && index2 === 0 || hash === href ? "block" : "none"}">${name}<span>${commit}</span></div>`
-    ).join("");
-    updateRightTitleAnchor(domMain);
-  };
-  var onChangeRightTitleAnchor = (event) => {
-    const target = event.target;
-    const nodeAnchor = target.closest(`.${CLASS_RIGHT_ANCHOR_ITEM}`);
-    const anchorId = nodeAnchor?.dataset.anchorId || "";
-    if (!anchorId) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const nodeMain = dom("#JIMI_DIALOG_MAIN");
-    const nodeTitle = getCurrentTitleList().find((item) => item.dataset.anchorId === anchorId);
-    if (!nodeMain || !nodeTitle) return;
-    setRightTitleAnchorTarget(anchorId);
-    nodeMain.scrollTo({ top: getTitleOffsetTop(nodeTitle, nodeMain), behavior: "smooth" });
-  };
-  var onScrollRightTitleAnchor = () => updateRightTitleAnchorTarget();
-  var updateRightTitleAnchor = (domMain = document.body) => {
-    const nodeAnchor = dom(SELECTOR_RIGHT_ANCHOR, domMain);
-    if (!nodeAnchor) return;
-    const currentTitleList = getCurrentTitleList(domMain);
-    nodeAnchor.innerHTML = "";
-    if (currentTitleList.length <= 1) {
-      nodeAnchor.style.display = "none";
-      return;
-    }
-    currentTitleList.forEach((item, index2) => {
-      const anchorId = `${getCurrentContentId(domMain)}-${index2}`;
-      item.dataset.anchorId = anchorId;
-      const button = domC("button", {
-        type: "button",
-        className: CLASS_RIGHT_ANCHOR_ITEM,
-        innerText: getTitleText(item)
-      });
-      button.dataset.anchorId = anchorId;
-      nodeAnchor.appendChild(button);
-    });
-    nodeAnchor.style.display = "flex";
-    updateRightTitleAnchorTarget(domMain);
-  };
-  var updateRightTitleAnchorTarget = (domMain = document.body) => {
-    const nodeAnchor = dom(SELECTOR_RIGHT_ANCHOR, domMain);
-    const nodeMain = dom("#JIMI_DIALOG_MAIN", domMain);
-    const currentTitleList = getCurrentTitleList(domMain);
-    if (!nodeAnchor || !nodeMain || currentTitleList.length <= 1) return;
-    let anchorId = currentTitleList[0].dataset.anchorId || "";
-    if (!nodeMain.clientHeight) {
-      setRightTitleAnchorTarget(anchorId, domMain);
-      return;
-    }
-    const currentTop = nodeMain.scrollTop + 4;
-    currentTitleList.forEach((item) => {
-      if (getTitleOffsetTop(item, nodeMain) <= currentTop) {
-        anchorId = item.dataset.anchorId || anchorId;
-      }
-    });
-    if (nodeMain.scrollHeight > nodeMain.clientHeight + 4 && nodeMain.scrollTop + nodeMain.clientHeight >= nodeMain.scrollHeight - 4) {
-      anchorId = currentTitleList[currentTitleList.length - 1].dataset.anchorId || anchorId;
-    }
-    setRightTitleAnchorTarget(anchorId, domMain);
-  };
-  var setRightTitleAnchorTarget = (anchorId, domMain = document.body) => {
-    domA(`.${CLASS_RIGHT_ANCHOR_ITEM}`, domMain).forEach((item) => {
-      item.classList.toggle(CLASS_RIGHT_ANCHOR_TARGET, item.dataset.anchorId === anchorId);
-    });
-  };
-  var getCurrentContentId = (domMain = document.body) => {
-    const nodeTarget = dom("#JIMI_DIALOG_MENU>div.target", domMain);
-    return (nodeTarget?.dataset.href || "").replace(/#/, "");
-  };
-  var getCurrentTitleList = (domMain = document.body) => {
-    const currentContentId = getCurrentContentId(domMain);
-    const nodeCurrentContent = currentContentId ? dom(`#${currentContentId}`, domMain) : void 0;
-    return nodeCurrentContent ? [...domA(".jimi-title", nodeCurrentContent)] : [];
-  };
-  var getTitleText = (nodeTitle) => {
-    const text = [...nodeTitle.childNodes].filter((item) => item.nodeType === Node.TEXT_NODE).map((item) => item.textContent || "").join("").trim();
-    return (text || nodeTitle.textContent || "").replace(/\s+/g, " ");
-  };
-  var getTitleOffsetTop = (nodeTitle, nodeMain) => nodeTitle.getBoundingClientRect().top - nodeMain.getBoundingClientRect().top + nodeMain.scrollTop;
+
   var HTML_HOOTS = ["www.zhihu.com", "zhuanlan.zhihu.com"];
-  var CLASS_INPUT_CLICK = "jimi-i";
-  var CLASS_INPUT_CHANGE = "jimi-i-change";
+
   var CLASS_NOT_INTERESTED = "jimi-not-interested";
   var CLASS_TO_QUESTION = "jimi-to-question";
   var CLASS_TIME_ITEM = "jimi-list-item-time";
@@ -1500,34 +1324,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       return false;
     }
   };
-  var BLOCKED_USER_COMMON = [
-    [
-      { label: "列表和回答 - 「屏蔽用户」按钮", value: "showBlockUser" },
-      { label: "用户主页 - 置顶「屏蔽用户」按钮", value: "userHomeTopBlockUser" },
-      { label: "评论区 - 「屏蔽用户」按钮", value: "showBlockUserComment" },
-      { label: "屏蔽黑名单用户发布的内容（问题、回答、文章）", value: "removeBlockUserContent" },
-      { label: "屏蔽黑名单用户发布的评论", value: "removeBlockUserComment" },
-      { label: "将黑名单用户发布的内容使用 * 代替", value: "replaceBlockUserContentWithStar" },
-      { label: '列表和回答 - 黑名单用户标识<div class="jimi-black-tag">黑名单</div>', value: "showBlockUserTag" },
-      { label: '评论区 - 黑名单用户标识<div class="jimi-black-tag">黑名单</div>', value: "showBlockUserCommentTag" },
-      { label: '黑名单用户标识显示标签分类<div class="jimi-black-tag">黑名单：xx</div>', value: "showBlockUserTagType" }
-    ]
-  ];
-  var BLACK_LIST_CONFIG_NAMES = [
-    "showBlockUser",
-    "userHomeTopBlockUser",
-    "showBlockUserComment",
-    "removeBlockUserComment",
-    "replaceBlockUserContentWithStar",
-    "showBlockUserCommentTag",
-    "showBlockUserTag",
-    "showBlockUserTagType",
-    "openTagChooseAfterBlockedUser",
-    "removeBlockUserContent",
-    "blockedUsers",
-    "localBlockedUsers",
-    "blockedUsersTags"
-  ];
+
   var updateItemAfterBlock = async (userInfo, listType = BLOCKED_USER_LIST_TYPE.zhihu, options = {}) => {
     const config = await myStorage.getConfig();
     const { openTagChooseAfterBlockedUser } = config;
@@ -1636,110 +1433,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
     }
   };
-  var onExportBlack = async () => {
-    const config = await myStorage.getConfig();
-    const configBlackList = {};
-    BLACK_LIST_CONFIG_NAMES.forEach((name) => {
-      if (typeof config[name] !== "undefined") {
-        configBlackList[name] = config[name];
-      }
-    });
-    const dateNumber = +/* @__PURE__ */ new Date();
-    const link = domC("a", {
-      href: "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(JSON.stringify(configBlackList)),
-      download: `黑名单配置-${formatTime(dateNumber, "YYYYMMDD-HHmmss")}-${dateNumber}.txt`
-    });
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  var onImportBlack = async (oFREvent) => {
-    let configBlackJson = oFREvent.target ? oFREvent.target.result : "";
-    if (typeof configBlackJson !== "string") return;
-    const configBlack = JSON.parse(configBlackJson);
-    const { blockedUsers = [], localBlockedUsers = [], blockedUsersTags = [] } = configBlack;
-    const prevConfig = await myStorage.getConfig();
-    const { blockedUsers: prevBlockUsers = [], localBlockedUsers: prevLocalBlockedUsers = [], blockedUsersTags: prevBlockedUsersTags = [] } = prevConfig;
-    const nTags = [.../* @__PURE__ */ new Set([...prevBlockedUsersTags, ...blockedUsersTags])];
-    const nBlackList = mergeBlockedUsers([...prevBlockUsers, ...blockedUsers]);
-    const blockedUserIds = new Set(nBlackList.map((item) => item.id));
-    const nLocalBlackList = mergeBlockedUsers([...prevLocalBlockedUsers, ...localBlockedUsers]).filter((item) => !blockedUserIds.has(item.id));
-    await myStorage.updateConfig({
-      ...prevConfig,
-      ...configBlack,
-      blockedUsers: nBlackList,
-      localBlockedUsers: nLocalBlackList,
-      blockedUsersTags: nTags
-    });
-    message("导入完成，请等待知乎黑名单同步...");
-    onSyncBlackList(0);
-  };
-  var onSyncRemoveBlockedUsers = async () => {
-    if (!confirm("您确定要取消所有知乎黑名单用户吗？")) return;
-    if (!confirm("确定清空所有知乎黑名单用户？")) return;
-    const { blockedUsers = [] } = await myStorage.getConfig();
-    if (!blockedUsers.length) return;
-    const buttonSync = dom('button[name="syncBlackRemove"]');
-    if (!buttonSync.querySelector("jimi-loading")) {
-      fnDomReplace(buttonSync, { innerHTML: '<i class="jimi-loading">↻</i>', disabled: true });
-    }
-    const len = blockedUsers.length;
-    let finishNumber = 0;
-    for (let i = 0; i < len; i++) {
-      const info = blockedUsers[i];
-      if (info.id) {
-        removeBlockUser(info, false).then(async () => {
-          finishNumber++;
-          if (finishNumber === len) {
-            fnDomReplace(buttonSync, { innerHTML: "清空知乎黑名单", disabled: false });
-            await myStorage.updateConfigItem("blockedUsers", []);
-            initHTMLBlockedUsers(document.body);
-          }
-        });
-      }
-    }
-  };
-  function onSyncBlackList(offset = 0, l = []) {
-    const nodeList = domById(ID_BLOCK_LIST);
-    if (!l.length && nodeList) {
-      nodeList.innerHTML = "知乎黑名单加载中...";
-    }
-    const buttonSync = dom('button[name="syncBlack"]');
-    if (!buttonSync.querySelector("jimi-loading")) {
-      fnDomReplace(buttonSync, { innerHTML: '<i class="jimi-loading">↻</i>', disabled: true });
-    }
-    const limit = 20;
-    const headers = store.getFetchHeaders();
-    fetch(`https://www.zhihu.com/api/v3/settings/blocked_users?offset=${offset}&limit=${limit}`, {
-      method: "GET",
-      headers: new Headers(headers),
-      credentials: "include"
-    }).then((response) => response.json()).then(async ({ data, paging }) => {
-      const prevConfig = await myStorage.getConfig();
-      const { blockedUsers = [], localBlockedUsers = [] } = prevConfig;
-      const prevBlockedUsers = [...blockedUsers, ...localBlockedUsers];
-      data.forEach(({ id, name, url_token }) => {
-        const findItem = prevBlockedUsers.find((i) => i.id === id);
-        l.push({ id, name, urlToken: url_token, tags: findItem && findItem.tags || [] });
-      });
-      if (!paging.is_end) {
-        onSyncBlackList(offset + limit, l);
-        if (nodeList) {
-          nodeList.innerHTML = `知乎黑名单加载中（${l.length} / ${paging.totals}）...`;
-        }
-      } else {
-        const syncedIds = new Set(l.map((item) => item.id));
-        await myStorage.updateConfig({
-          ...prevConfig,
-          blockedUsers: l,
-          localBlockedUsers: localBlockedUsers.filter((item) => !syncedIds.has(item.id))
-        });
-        initHTMLBlockedUsers(document.body);
-        fnDomReplace(buttonSync, { innerHTML: "同步知乎黑名单", disabled: false });
-        message("知乎黑名单同步完成");
-      }
-    });
-  }
+
   var CLASS_TOP_BLOCK = "jimi-top-block-in-user-home";
   var blockObserver;
   var index = 0;
@@ -1788,50 +1482,15 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       setTimeout(topBlockUser, 1e3);
     }
   };
-  var createHTMLSizeSetting = (domMain) => {
-    dom("#JIMI_VERSION_RANGE_ZHIHU", domMain).innerHTML = VERSION_RANGE_HAVE_PERCENT.map(
-      (item) => `<div class="jimi-form-box-item">${`<div>${item.label}${createHTMLTooltip("最小显示宽度为600像素，设置低于此值将按照600像素显示")}</div><div>${createHTMLRange(item.value, VERSION_MIN_WIDTH, 1500) + createHTMLRange(`${item.value}Percent`, 20, 100, "%")}</div>`}</div><div class="jimi-form-box-item">${`<div>${item.label}使用百分比设置</div><div><input class="jimi-i jimi-switch" name="${item.value}IsPercent" type="checkbox" value="on" /></div>`}</div>`
-    ).join("");
-    dom("#JIMI_IMAGE_SIZE_CUSTOM", domMain).innerHTML = `<div>回答和文章图片宽度</div>` + createHTMLRange("zoomImageSize", 0, 1e3);
-    dom("#JIMI_IMAGE_HEIGHT_CUSTOM", domMain).innerHTML = `<div>图片最大高度</div>` + createHTMLRange("zoomImageHeightSize", 0, 1e3);
-    dom("#JIMI_LIST_VIDEO_SIZE_CUSTOM", domMain).innerHTML = `<div>列表视频回答宽度</div>` + createHTMLRange("zoomListVideoSize", 0, 1e3);
-    dom("#JIMI_FONT_SIZE_IN_ZHIHU", domMain).innerHTML = FONT_SIZE_INPUT.map(
-      (item) => `<div class="jimi-form-box-item">${`<div>${item.label}</div><div>${`<input type="number" name="${item.value}" class="jimi-i-change" style="width: 100px;margin-right: 8px;" placeholder="例：18" /><button class="jimi-button jimi-reset-font-size" name="reset-${item.value}">↺</button>`}</div>`}</div>`
-    ).join("");
-  };
-  var FONT_SIZE_INPUT = [
-    { value: "fontSizeForListTitle", label: "列表标题文字大小" },
-    { value: "fontSizeForList", label: "列表内容文字大小" },
-    { value: "fontSizeForAnswerTitle", label: "回答标题文字大小" },
-    { value: "fontSizeForAnswer", label: "回答内容文字大小" },
-    { value: "fontSizeForArticleTitle", label: "文章标题文字大小" },
-    { value: "fontSizeForArticle", label: "文章内容文字大小" },
-    { value: "contentLineHeight", label: "内容行高" }
-  ];
+
   var VERSION_MIN_WIDTH = isIPhoneLayout ? 0 : 600;
-  var VERSION_RANGE_HAVE_PERCENT = [
-    { label: "列表宽度", value: "versionHome" },
-    { label: "回答宽度", value: "versionAnswer" },
-    { label: "文章宽度", value: "versionArticle" },
-    { label: "用户主页宽度", value: "versionUserHome" },
-    { label: "收藏夹宽度", value: "versionCollection" }
-  ];
+
   var mySize = {
-    init: async function() {
-      fnAppendStyle("JIMI_STYLE_VERSION", await this.content());
+    init: function() {
+      fnAppendStyle("JIMI_STYLE_VERSION", this.content());
     },
-    change: function() {
-      this.initAfterLoad();
-      this.init();
-    },
-    initAfterLoad: async function() {
-      const pfConfig = await myStorage.getConfig();
-      domById("JIMI_IMAGE_SIZE_CUSTOM").style.display = pfConfig.zoomImageType === "2" /* 自定义尺寸 */ ? "flex" : "none";
-      domById("JIMI_IMAGE_HEIGHT_CUSTOM").style.display = pfConfig.zoomImageHeight === "1" /* 开启 */ ? "flex" : "none";
-      domById("JIMI_LIST_VIDEO_SIZE_CUSTOM").style.display = pfConfig.zoomListVideoType === "2" /* 自定义尺寸 */ ? "flex" : "none";
-    },
-    content: async function() {
-      const config = await myStorage.getConfig();
+    content: function() {
+      const config = applyCodePreset();
       const {
         commitModalSizeSameVersion,
         versionArticle,
@@ -1865,7 +1524,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         fontSizeForArticleTitle,
         contentLineHeight
       } = config;
-      const dark = await isDark();
+      const dark = isDark();
       const formatVersionPercentSize = (name) => isIPhoneLayout ? "100%" : !config[`${name}IsPercent`] ? `${config[name] || "1000"}px` : `${config[`${name}Percent`] || "70"}vw`;
       const versionSizeHome = formatVersionPercentSize("versionHome");
       const versionSizeAnswer = formatVersionPercentSize("versionAnswer");
@@ -1914,11 +1573,12 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         `.Topstory-body .RichContent-inner,.Topstory-body .jimi-list-item-time,.Topstory-body .CommentContent,.SearchResult-Card .RichContent-inner,.SearchResult-Card .CommentContent,.HotItem-excerpt--multiLine{font-size: ${fontSizeForList}px!important;}`,
         !!fontSizeForList
       ) + fnReturnStr(`.QuestionPage .RichContent-inner,.QuestionPage .jimi-list-item-time,.QuestionPage .CommentContent{font-size: ${fontSizeForAnswer}px}`, !!fontSizeForAnswer) + fnReturnStr(`.zhuanlan .Post-RichTextContainer,.zhuanlan .jimi-article-create-time,.zhuanlan .CommentContent{font-size: ${fontSizeForArticle}px}`, !!fontSizeForArticle) + fnReturnStr(`.zhuanlan .Post-Main .Post-Title{font-size: ${fontSizeForArticleTitle}px;}`, !!fontSizeForArticleTitle) + fnReturnStr(`.ContentItem-title,.HotItem-title{font-size: ${fontSizeForListTitle}px!important;}`, !!fontSizeForListTitle) + fnReturnStr(`.QuestionHeader-title{font-size: ${fontSizeForAnswerTitle}px!important;}`, !!fontSizeForAnswerTitle) + fnReturnStr(`p {line-height: ${contentLineHeight}px;}`, !!contentLineHeight);
-      return xxxFontSize + xxxHighlight + xxxImage + xxxListMore + xxxShoppingLink + xxxShoppingLink + xxxSusHeader + xxxSusHomeTab + xxxTitleTag + xxxVideo + xxxWidth;
+      return xxxFontSize + xxxHighlight + xxxImage + xxxListMore + xxxShoppingLink + xxxSusHeader + xxxSusHomeTab + xxxTitleTag + xxxVideo + xxxWidth;
     }
   };
   var changeSizeBeforeResize = async () => {
     const { suspensionPickupRight, suspensionPickUp } = await myStorage.getConfig();
+    if (!suspensionPickUp) return;
     const prevContentBox = domById("TopstoryContent") || dom(".Question-mainColumn") || domById("SearchMain") || dom(".Profile-mainColumn") || dom(".CollectionsDetailPage-mainColumn") || document.body;
     const nodeContentBox = prevContentBox.offsetWidth > document.body.offsetWidth ? document.body : prevContentBox;
     let suspensionRight = +(suspensionPickupRight || 0);
@@ -1930,61 +1590,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       fnReturnStr(`.ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question="true"]{right: ${suspensionRight}px;}`, suspensionPickUp)
     );
   };
-  var echoData = async () => {
-    const config = await myStorage.getConfig(true);
-    const textSameName = {
-      globalTitle: (e) => e.value = config.globalTitle || document.title,
-      customizeCss: (e) => e.value = config.customizeCss || ""
-    };
-    const echoText = (even) => textSameName[even.name] ? textSameName[even.name](even) : even.value = config[even.name] || "";
-    const echo = {
-      radio: (even) => config.hasOwnProperty(even.name) && String(even.value) === String(config[even.name]) && (even.checked = true),
-      checkbox: (even) => even.checked = config[even.name] || false,
-      text: echoText,
-      number: echoText,
-      range: (even) => {
-        const nValue = config[even.name];
-        const nodeRange = dom(`[name="${even.name}"]`);
-        const min = nodeRange && nodeRange.min;
-        const rangeNum = isNaN(+nValue) || !(+nValue > 0) ? min : nValue;
-        even.value = rangeNum;
-        const nodeNewOne = domById(even.name);
-        nodeNewOne && (nodeNewOne.innerText = rangeNum);
-      }
-    };
-    const doEcho = (item) => {
-      echo[item.type] && echo[item.type](item);
-    };
-    const nodeArrInputClick = domA(`.${CLASS_INPUT_CLICK}`);
-    for (let i = 0, len = nodeArrInputClick.length; i < len; i++) {
-      doEcho(nodeArrInputClick[i]);
-    }
-    const nodeArrInputChange = domA(`.${CLASS_INPUT_CHANGE}`);
-    for (let i = 0, len = nodeArrInputChange.length; i < len; i++) {
-      doEcho(nodeArrInputChange[i]);
-    }
-    echo.text(dom('[name="globalTitle"]'));
-    VERSION_RANGE_HAVE_PERCENT.forEach((item) => {
-      const isPercent = config[`${item.value}IsPercent`];
-      const domRange = dom(`.jimi-range-${item.value}`);
-      const domRangePercent = dom(`.jimi-range-${item.value}Percent`);
-      if (domRange && domRangePercent) {
-        domRange.style.display = isPercent ? "none" : "flex";
-        domRangePercent.style.display = !isPercent ? "none" : "flex";
-      }
-    });
-    echoMySelect();
-    changeReplaceBlockUserSwitchDisabled(config.replaceBlockUserContentWithStar);
-    echoBlockedContent(document.body);
-  };
-  var echoHistory = async () => {
-    const history = await myStorage.getHistory();
-    const { list, view } = history;
-    const nodeList = dom("#JIMI_HISTORY_LIST .jimi-set-content");
-    const nodeView = dom("#JIMI_HISTORY_VIEW .jimi-set-content");
-    nodeList && (nodeList.innerHTML = list.join(""));
-    nodeView && (nodeView.innerHTML = view.join(""));
-  };
+
   var openExtra = (type, needCover = true) => {
     const extra = domById(ID_EXTRA_DIALOG);
     const extraCover = domById("JIMI_EXTRA_OUTPUT_COVER");
@@ -2003,26 +1609,20 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     extra.style.display = "none";
     domById("JIMI_EXTRA_OUTPUT_COVER").style.display = "none";
   };
-  var ID_BLOCKED_USERS_TAGS = "JIMI_BLOCKED_USERS_TAGS";
-  var CLASS_REMOVE_BLOCKED_TAG = "jimi-remove-blocked-tag";
+
   var CLASS_BLACK_ITEM_MORE = "jimi-black-item-more";
   var CLASS_BLACK_ITEM_ACTION = "jimi-black-item-action";
   var ID_BLOCKED_USER_MENU = "JIMI_BLOCKED_USER_MENU";
-  var CLASS_EDIT_TAG = "jimi-edit-blocked-tag";
+
   var ID_BLOCK_LIST = "JIMI_BLOCKED_USERS";
   var ID_LOCAL_BLOCK_LIST = "JIMI_LOCAL_BLOCKED_USERS";
   var CLASS_BLACK_TAG = "jimi-black-tag";
-  var REPLACE_DISABLED_SWITCH_NAMES = ["removeBlockUserContent", "removeBlockUserComment"];
+
   var BLOCKED_USER_LIST_ID = {
     zhihu: ID_BLOCK_LIST,
     local: ID_LOCAL_BLOCK_LIST
   };
-  var changeReplaceBlockUserSwitchDisabled = (disabled) => {
-    REPLACE_DISABLED_SWITCH_NAMES.forEach((name) => {
-      const input = dom(`[name="${name}"]`);
-      input && (input.disabled = !!disabled);
-    });
-  };
+
   var escapeHTML = (value = "") => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   var encodeBlockedUserInfo = (info) => encodeURIComponent(JSON.stringify(info));
   var getBlockedUserInfoFromItem = (item) => {
@@ -2036,99 +1636,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var blackItemContent = ({ id, name, urlToken, tags = [] }, listType = BLOCKED_USER_LIST_TYPE.zhihu) => {
     return `<a href="https://www.zhihu.com/people/${escapeHTML(urlToken || id)}" target="_blank">${escapeHTML(name)}</a>` + tags.map((tag) => `<span class="jimi-in-blocked-user-tag">${escapeHTML(tag)}</span>`).join("") + `<i class="${CLASS_BLACK_ITEM_MORE}">···</i>`;
   };
-  var tagContext = (i) => escapeHTML(i) + `<span class="${CLASS_EDIT_TAG}">✎</span><i class="${CLASS_REMOVE_BLOCKED_TAG}" style="margin-left:4px;cursor:pointer;font-style: normal;font-size:12px;">✕</i>`;
-  var tagInputCallback = async (e) => {
-    const { blockedUsersTags = [] } = await myStorage.getConfig();
-    const target = e.target;
-    const value = target.value.toLowerCase();
-    if (blockedUsersTags.includes(value)) {
-      message("该标签已经存在");
-      return;
-    }
-    blockedUsersTags.push(value);
-    await myStorage.updateConfigItem("blockedUsersTags", blockedUsersTags);
-    const domItem = domC("span", {
-      innerHTML: tagContext(value),
-      className: "jimi-blocked-users-tag"
-    });
-    domItem.dataset.info = value;
-    domById(ID_BLOCKED_USERS_TAGS).appendChild(domItem);
-    target.value = "";
-  };
-  var initHTMLBlockedUserTags = async (domMain) => {
-    const prevConfig = await myStorage.getConfig();
-    const nodeBlockedUsersTags = dom(`#${ID_BLOCKED_USERS_TAGS}`, domMain);
-    nodeBlockedUsersTags.innerHTML = (prevConfig.blockedUsersTags || []).map((i) => `<span class="jimi-blocked-users-tag" data-info="${escapeHTML(i)}">${tagContext(i)}</span>`).join("");
-    nodeBlockedUsersTags.onclick = async (event) => {
-      const nConfig = await myStorage.getConfig();
-      const { blockedUsers = [], localBlockedUsers = [], blockedUsersTags = [] } = nConfig;
-      const target = event.target;
-      if (target.classList.contains(CLASS_REMOVE_BLOCKED_TAG)) {
-        const item = target.parentElement;
-        const info = item.dataset.info || "";
-        const isUsed = [...blockedUsers, ...localBlockedUsers].some((item2) => {
-          if (item2.tags && item2.tags.length) {
-            return item2.tags.some((i) => i === info);
-          }
-          return false;
-        });
-        if (isUsed) {
-          message("此标签有黑名单用户正在使用");
-          return;
-        }
-        item.remove();
-        const index2 = blockedUsersTags.findIndex((i) => i === info);
-        blockedUsersTags.splice(index2, 1);
-        myStorage.updateConfigItem("blockedUsersTags", blockedUsersTags);
-      }
-      if (target.classList.contains(CLASS_EDIT_TAG)) {
-        const { blockedUsers: blockedUsers2 = [], localBlockedUsers: localBlockedUsers2 = [], blockedUsersTags: blockedUsersTags2 = [] } = await myStorage.getConfig();
-        const item = target.parentElement;
-        const prevName = item.dataset.info || "";
-        openExtra("changeBlockedUserTagName");
-        dom('[data-type="changeBlockedUserTagName"] .jimi-title').innerHTML = `修改标签名（原名称： ${prevName}）`;
-        dom('[name="blocked-user-tag-name"]').value = prevName;
-        dom('[name="confirm-change-blocked-user-tag-name"]').onclick = async function() {
-          const nInfo = dom('[name="blocked-user-tag-name"]').value;
-          const indexTag = blockedUsersTags2.findIndex((i) => i === prevName);
-          blockedUsersTags2.splice(indexTag, 1, nInfo);
-          [...blockedUsers2, ...localBlockedUsers2].forEach((item2) => {
-            if (!item2.tags) return;
-            const nIndex = (item2.tags || []).findIndex((i) => i === prevName);
-            if (nIndex >= 0) {
-              item2.tags.splice(nIndex, 1, nInfo);
-            }
-          });
-          await myStorage.updateConfig({
-            ...nConfig,
-            blockedUsersTags: blockedUsersTags2,
-            blockedUsers: blockedUsers2,
-            localBlockedUsers: localBlockedUsers2
-          });
-          initHTMLBlockedUserTags(domMain);
-          initHTMLBlockedUsers(domMain);
-          closeExtra();
-        };
-        dom('[name="cancel-change-blocked-user-tag-name"]').onclick = function() {
-          closeExtra();
-        };
-      }
-    };
-    dom('input[name="inputBlockedUsersTag"]', domMain).onchange = tagInputCallback;
-    dom('input[name="inputCreateNewTag"]').onchange = async (e) => {
-      const target = e.target;
-      const value = target.value.toLowerCase();
-      await tagInputCallback(e);
-      const boxTags = dom(".jimi-choose-blocked-user-tags");
-      const nTag = domC("span", {
-        innerHTML: escapeHTML(value)
-      });
-      nTag.dataset.choose = "false";
-      nTag.dataset.type = "blockedUserTag";
-      nTag.dataset.name = value;
-      boxTags.appendChild(nTag);
-    };
-  };
+
   var initHTMLBlockedUsers = async (domMain) => {
     if (!dom("#JIMI_BLOCKED_NUMBER", domMain)) return;
     removeBlockedUserMenu();
@@ -2273,10 +1781,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       closeExtra();
     };
   };
-  var echoBlockedContent = (domMain) => {
-    initHTMLBlockedUserTags(domMain);
-    initHTMLBlockedUsers(domMain);
-  };
+
   var CLASS_BLOCK_USER_BOX = "jimi-block-user-box";
   var CLASS_BTN_ADD_BLOCKED = "jimi-block-add-blocked";
   var CLASS_BTN_REMOVE_BLOCKED = "jimi-block-remove-blocked";
@@ -2418,23 +1923,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     };
     nodeUser.appendChild(nDomButton);
   };
-  var ID_LIST = "JIMI_NOT_INTERESTED_LIST";
-  var CLASS_REMOVE = "jimi-remove-not-interested-item";
-  var createHTMLNotInterestedList = async () => {
-    let { notInterestedList = [] } = await myStorage.getConfig();
-    const boxList = domById(ID_LIST);
-    if (!boxList) return;
-    boxList.innerHTML = notInterestedList.map((i) => `<div class="jimi-form-box-item"><span>${i}</span><span class="${CLASS_REMOVE}">✕</span></div>`).join("");
-    boxList.onclick = async (event) => {
-      const target = event.target;
-      if (target.classList.contains(CLASS_REMOVE)) {
-        const content = target.previousElementSibling.textContent;
-        notInterestedList = notInterestedList.filter((i) => i !== content);
-        await myStorage.updateConfigItem("notInterestedList", notInterestedList);
-        target.parentElement.remove();
-      }
-    };
-  };
+
   var addNotInterestedItem = async (name) => {
     const { notInterestedList = [] } = await myStorage.getConfig();
     if (!notInterestedList.includes(name)) {
@@ -2442,7 +1931,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
   };
   var INNER_HTML = `<div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_IMAGE"><div><img src=""></div></div><div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_VIDEO"><div><video src="" autoplay loop></video></div></div><iframe class="jimi-pdf-box-content" style="display: none"></iframe><div id="JIMI_MESSAGE_BOX"></div><div id="JIMI_EXTRA_OUTPUT_COVER" style="display: none"></div><div id="JIMI_EXTRA_OUTPUT_DIALOG" style="display: none" data-status="close"><div data-type="chooseBlockedUserTags"><div class="jimi-title">选择标签</div><div class="jimi-choose-blocked-user-tags"></div><div style="padding: 0 14px 6px"><input name="inputCreateNewTag" type="text" placeholder="添加新的标签，输入后回车添加（不区分大小写）" style="width: 300px"></div><div class="jimi-extra-footer"><button class="jimi-button" name="choose-blocked-user-tags-finish">完成</button></div></div><div data-type="changeBlockedUserTagName"><div class="jimi-title">修改标签名</div><div class="jimi-change-blocked-user-tag-name"><input type="text" name="blocked-user-tag-name"></div><div class="jimi-extra-footer"><button class="jimi-button" name="confirm-change-blocked-user-tag-name">修改</button> <button class="jimi-button" name="cancel-change-blocked-user-tag-name">取消</button></div></div></div>`;
-  var INNER_CSS = `.marginTB8{margin:8px 0}.PositionCenter{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%)}.CommonTransition{transition-property:transform;transition-duration:500ms;transition-timing-function:cubic-bezier(.2, 0, 0, 1)}[theme-light='1'] #JIMI_DIALOG_MENU>div.target,[theme-light='1'] .jimi-switch:checked{background:#ff3b30}[theme-light='1'] #JIMI_DEFAULT_SELF a,[theme-light='1'] .jimi-zhihu-key a,[theme-light='1'] #JIMI_HISTORY_LIST a:hover,[theme-light='1'] #JIMI_HISTORY_VIEW a:hover,[theme-light='1'] .jimi-black-item a:hover,[theme-light='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='1'] .jimi-black-item-action:hover,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff3b30 !important}[theme-light='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,59,48,0.1)}[theme-light='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#ff3b30}[theme-light='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#ff3b30}[theme-light='1'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='1'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#ff3b30}[theme-light='1'] .jimi-in-blocked-user-tag,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff3b30;color:#ff3b30;background:rgba(255,59,48,0.1)}[theme-light='2'] #JIMI_DIALOG_MENU>div.target,[theme-light='2'] .jimi-switch:checked{background:#a05a00}[theme-light='2'] #JIMI_DEFAULT_SELF a,[theme-light='2'] .jimi-zhihu-key a,[theme-light='2'] #JIMI_HISTORY_LIST a:hover,[theme-light='2'] #JIMI_HISTORY_VIEW a:hover,[theme-light='2'] .jimi-black-item a:hover,[theme-light='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='2'] .jimi-black-item-action:hover,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#a05a00 !important}[theme-light='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(160,90,0,0.1)}[theme-light='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#a05a00}[theme-light='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#a05a00}[theme-light='2'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='2'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#a05a00}[theme-light='2'] .jimi-in-blocked-user-tag,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#a05a00;color:#a05a00;background:rgba(160,90,0,0.1)}[theme-light='3'] #JIMI_DIALOG_MENU>div.target,[theme-light='3'] .jimi-switch:checked{background:#007d1b}[theme-light='3'] #JIMI_DEFAULT_SELF a,[theme-light='3'] .jimi-zhihu-key a,[theme-light='3'] #JIMI_HISTORY_LIST a:hover,[theme-light='3'] #JIMI_HISTORY_VIEW a:hover,[theme-light='3'] .jimi-black-item a:hover,[theme-light='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='3'] .jimi-black-item-action:hover,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#007d1b !important}[theme-light='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(0,125,27,0.1)}[theme-light='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#007d1b}[theme-light='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#007d1b}[theme-light='3'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='3'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#007d1b}[theme-light='3'] .jimi-in-blocked-user-tag,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#007d1b;color:#007d1b;background:rgba(0,125,27,0.1)}[theme-light='4'] #JIMI_DIALOG_MENU>div.target,[theme-light='4'] .jimi-switch:checked{background:#8e8e93}[theme-light='4'] #JIMI_DEFAULT_SELF a,[theme-light='4'] .jimi-zhihu-key a,[theme-light='4'] #JIMI_HISTORY_LIST a:hover,[theme-light='4'] #JIMI_HISTORY_VIEW a:hover,[theme-light='4'] .jimi-black-item a:hover,[theme-light='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='4'] .jimi-black-item-action:hover,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#8e8e93 !important}[theme-light='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(142,142,147,0.1)}[theme-light='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#8e8e93}[theme-light='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#8e8e93}[theme-light='4'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='4'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#8e8e93}[theme-light='4'] .jimi-in-blocked-user-tag,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#8e8e93;color:#8e8e93;background:rgba(142,142,147,0.1)}[theme-light='5'] #JIMI_DIALOG_MENU>div.target,[theme-light='5'] .jimi-switch:checked{background:#af52de}[theme-light='5'] #JIMI_DEFAULT_SELF a,[theme-light='5'] .jimi-zhihu-key a,[theme-light='5'] #JIMI_HISTORY_LIST a:hover,[theme-light='5'] #JIMI_HISTORY_VIEW a:hover,[theme-light='5'] .jimi-black-item a:hover,[theme-light='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='5'] .jimi-black-item-action:hover,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#af52de !important}[theme-light='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(175,82,222,0.1)}[theme-light='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#af52de}[theme-light='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#af52de}[theme-light='5'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='5'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#af52de}[theme-light='5'] .jimi-in-blocked-user-tag,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#af52de;color:#af52de;background:rgba(175,82,222,0.1)}[theme-light='6'] #JIMI_DIALOG_MENU>div.target,[theme-light='6'] .jimi-switch:checked{background:#ff9500}[theme-light='6'] #JIMI_DEFAULT_SELF a,[theme-light='6'] .jimi-zhihu-key a,[theme-light='6'] #JIMI_HISTORY_LIST a:hover,[theme-light='6'] #JIMI_HISTORY_VIEW a:hover,[theme-light='6'] .jimi-black-item a:hover,[theme-light='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='6'] .jimi-black-item-action:hover,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,179,64,0.1)}[theme-light='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#ff9500}[theme-light='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#ff9500}[theme-light='6'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='6'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#ff9500}[theme-light='6'] .jimi-in-blocked-user-tag,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-light='7'] #JIMI_DIALOG_MENU>div.target,[theme-light='7'] .jimi-switch:checked{background:#ff9500}[theme-light='7'] #JIMI_DEFAULT_SELF a,[theme-light='7'] .jimi-zhihu-key a,[theme-light='7'] #JIMI_HISTORY_LIST a:hover,[theme-light='7'] #JIMI_HISTORY_VIEW a:hover,[theme-light='7'] .jimi-black-item a:hover,[theme-light='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-light='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-light='7'] .jimi-black-item-action:hover,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,179,64,0.1)}[theme-light='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#ff9500}[theme-light='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#ff9500}[theme-light='7'] #JIMI_TITLE_ICO label input:checked+img,[theme-light='7'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div{border-color:#ff9500}[theme-light='7'] .jimi-in-blocked-user-tag,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-dark='0'] #JIMI_DIALOG,[theme-dark='1'] #JIMI_DIALOG,[theme-dark='2'] #JIMI_DIALOG,[theme-dark='3'] #JIMI_DIALOG,[theme-dark='4'] #JIMI_DIALOG,[theme-dark='7'] #JIMI_DIALOG{color:#dfdfdf;box-shadow:2px 2px 4px #4a4848,-2px -2px 4px #4a4848}[theme-dark='0'] #JIMI_DIALOG,[theme-dark='1'] #JIMI_DIALOG,[theme-dark='2'] #JIMI_DIALOG,[theme-dark='3'] #JIMI_DIALOG,[theme-dark='4'] #JIMI_DIALOG,[theme-dark='7'] #JIMI_DIALOG,[theme-dark='0'] #JIMI_DIALOG_LEFT,[theme-dark='1'] #JIMI_DIALOG_LEFT,[theme-dark='2'] #JIMI_DIALOG_LEFT,[theme-dark='3'] #JIMI_DIALOG_LEFT,[theme-dark='4'] #JIMI_DIALOG_LEFT,[theme-dark='7'] #JIMI_DIALOG_LEFT,[theme-dark='0'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='1'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='2'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='3'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='4'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='7'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='0'] .jimi-black-item,[theme-dark='1'] .jimi-black-item,[theme-dark='2'] .jimi-black-item,[theme-dark='3'] .jimi-black-item,[theme-dark='4'] .jimi-black-item,[theme-dark='7'] .jimi-black-item,[theme-dark='0'] .jimi-blocked-users-tag,[theme-dark='1'] .jimi-blocked-users-tag,[theme-dark='2'] .jimi-blocked-users-tag,[theme-dark='3'] .jimi-blocked-users-tag,[theme-dark='4'] .jimi-blocked-users-tag,[theme-dark='7'] .jimi-blocked-users-tag,[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='0'] #JIMI_DIALOG_RIGHT,[theme-dark='1'] #JIMI_DIALOG_RIGHT,[theme-dark='2'] #JIMI_DIALOG_RIGHT,[theme-dark='3'] #JIMI_DIALOG_RIGHT,[theme-dark='4'] #JIMI_DIALOG_RIGHT,[theme-dark='7'] #JIMI_DIALOG_RIGHT,[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='0'] #JIMI_HIDDEN .jimi-title,[theme-dark='1'] #JIMI_HIDDEN .jimi-title,[theme-dark='2'] #JIMI_HIDDEN .jimi-title,[theme-dark='3'] #JIMI_HIDDEN .jimi-title,[theme-dark='4'] #JIMI_HIDDEN .jimi-title,[theme-dark='7'] #JIMI_HIDDEN .jimi-title,[theme-dark='0'] #JIMI_FILTER .jimi-title,[theme-dark='1'] #JIMI_FILTER .jimi-title,[theme-dark='2'] #JIMI_FILTER .jimi-title,[theme-dark='3'] #JIMI_FILTER .jimi-title,[theme-dark='4'] #JIMI_FILTER .jimi-title,[theme-dark='7'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='0'] .jimi-form-box,[theme-dark='1'] .jimi-form-box,[theme-dark='2'] .jimi-form-box,[theme-dark='3'] .jimi-form-box,[theme-dark='4'] .jimi-form-box,[theme-dark='7'] .jimi-form-box{background:#312e2e}[theme-dark='0'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div,[theme-dark='1'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div,[theme-dark='2'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div,[theme-dark='3'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div,[theme-dark='4'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div,[theme-dark='7'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div{color:#b8b7b7}[theme-dark='0'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='1'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='2'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='3'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='4'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='7'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='0'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='1'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='2'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='3'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='4'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='7'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='0'] #JIMI_BACKGROUND_DARK .jimi-background-item-name,[theme-dark='1'] #JIMI_BACKGROUND_DARK .jimi-background-item-name,[theme-dark='2'] #JIMI_BACKGROUND_DARK .jimi-background-item-name,[theme-dark='3'] #JIMI_BACKGROUND_DARK .jimi-background-item-name,[theme-dark='4'] #JIMI_BACKGROUND_DARK .jimi-background-item-name,[theme-dark='7'] #JIMI_BACKGROUND_DARK .jimi-background-item-name{color:#989796}[theme-dark='0'] .jimi-switch,[theme-dark='1'] .jimi-switch,[theme-dark='2'] .jimi-switch,[theme-dark='3'] .jimi-switch,[theme-dark='4'] .jimi-switch,[theme-dark='7'] .jimi-switch{background:#474443}[theme-dark='0'] #JIMI_DIALOG_MENU>div.target,[theme-dark='1'] #JIMI_DIALOG_MENU>div.target,[theme-dark='2'] #JIMI_DIALOG_MENU>div.target,[theme-dark='3'] #JIMI_DIALOG_MENU>div.target,[theme-dark='4'] #JIMI_DIALOG_MENU>div.target,[theme-dark='7'] #JIMI_DIALOG_MENU>div.target,[theme-dark='0'] .jimi-switch:checked,[theme-dark='1'] .jimi-switch:checked,[theme-dark='2'] .jimi-switch:checked,[theme-dark='3'] .jimi-switch:checked,[theme-dark='4'] .jimi-switch:checked,[theme-dark='7'] .jimi-switch:checked{background:#175ac0}[theme-dark='0'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='1'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='2'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='3'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='4'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='7'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='0'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='1'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='2'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='3'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='4'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='7'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#175ac0}[theme-dark='0'] #JIMI_DEFAULT_SELF a,[theme-dark='1'] #JIMI_DEFAULT_SELF a,[theme-dark='2'] #JIMI_DEFAULT_SELF a,[theme-dark='3'] #JIMI_DEFAULT_SELF a,[theme-dark='4'] #JIMI_DEFAULT_SELF a,[theme-dark='7'] #JIMI_DEFAULT_SELF a,[theme-dark='0'] .jimi-zhihu-key a,[theme-dark='1'] .jimi-zhihu-key a,[theme-dark='2'] .jimi-zhihu-key a,[theme-dark='3'] .jimi-zhihu-key a,[theme-dark='4'] .jimi-zhihu-key a,[theme-dark='7'] .jimi-zhihu-key a,[theme-dark='0'] #JIMI_HISTORY_LIST a:hover,[theme-dark='1'] #JIMI_HISTORY_LIST a:hover,[theme-dark='2'] #JIMI_HISTORY_LIST a:hover,[theme-dark='3'] #JIMI_HISTORY_LIST a:hover,[theme-dark='4'] #JIMI_HISTORY_LIST a:hover,[theme-dark='7'] #JIMI_HISTORY_LIST a:hover,[theme-dark='0'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='1'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='2'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='3'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='4'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='7'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='0'] .jimi-black-item a:hover,[theme-dark='1'] .jimi-black-item a:hover,[theme-dark='2'] .jimi-black-item a:hover,[theme-dark='3'] .jimi-black-item a:hover,[theme-dark='4'] .jimi-black-item a:hover,[theme-dark='7'] .jimi-black-item a:hover,[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag{color:#175ac0 !important}[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,255,255,0.08)}[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#175ac0}[theme-dark='0'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible,[theme-dark='1'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible,[theme-dark='2'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible,[theme-dark='3'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible,[theme-dark='4'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible,[theme-dark='7'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#175ac0}[theme-dark='0'] .jimi-form-box,[theme-dark='1'] .jimi-form-box,[theme-dark='2'] .jimi-form-box,[theme-dark='3'] .jimi-form-box,[theme-dark='4'] .jimi-form-box,[theme-dark='7'] .jimi-form-box{border-color:#514e4e}[theme-dark='0'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='1'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='2'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='3'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='4'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='7'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='0'] .key-shadow,[theme-dark='1'] .key-shadow,[theme-dark='2'] .key-shadow,[theme-dark='3'] .key-shadow,[theme-dark='4'] .key-shadow,[theme-dark='7'] .key-shadow{background:#383534}[theme-dark='0'] #JIMI_DIALOG input[type='range'],[theme-dark='1'] #JIMI_DIALOG input[type='range'],[theme-dark='2'] #JIMI_DIALOG input[type='range'],[theme-dark='3'] #JIMI_DIALOG input[type='range'],[theme-dark='4'] #JIMI_DIALOG input[type='range'],[theme-dark='7'] #JIMI_DIALOG input[type='range']{background:#474443;box-shadow:inset 1px 1px 2px #474443,inset -1px -1px 2px #474443}[theme-dark='0'] #JIMI_DIALOG input[type='range']::before,[theme-dark='1'] #JIMI_DIALOG input[type='range']::before,[theme-dark='2'] #JIMI_DIALOG input[type='range']::before,[theme-dark='3'] #JIMI_DIALOG input[type='range']::before,[theme-dark='4'] #JIMI_DIALOG input[type='range']::before,[theme-dark='7'] #JIMI_DIALOG input[type='range']::before,[theme-dark='0'] #JIMI_DIALOG input[type='range']::after,[theme-dark='1'] #JIMI_DIALOG input[type='range']::after,[theme-dark='2'] #JIMI_DIALOG input[type='range']::after,[theme-dark='3'] #JIMI_DIALOG input[type='range']::after,[theme-dark='4'] #JIMI_DIALOG input[type='range']::after,[theme-dark='7'] #JIMI_DIALOG input[type='range']::after{background:#5a5958}[theme-dark='0'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb,[theme-dark='1'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb,[theme-dark='2'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb,[theme-dark='3'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb,[theme-dark='4'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb,[theme-dark='7'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb{background:#989797;border:1px solid #b0b0af}[theme-dark='0'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active,[theme-dark='1'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active,[theme-dark='2'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active,[theme-dark='3'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active,[theme-dark='4'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active,[theme-dark='7'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active{background:#b0b0af}[theme-dark='0'] .jimi-button:hover,[theme-dark='1'] .jimi-button:hover,[theme-dark='2'] .jimi-button:hover,[theme-dark='3'] .jimi-button:hover,[theme-dark='4'] .jimi-button:hover,[theme-dark='7'] .jimi-button:hover{color:#62605e}[theme-dark='5'] #JIMI_DIALOG{color:#dfdfdf;box-shadow:2px 2px 4px #4a4848,-2px -2px 4px #4a4848}[theme-dark='5'] #JIMI_DIALOG,[theme-dark='5'] #JIMI_DIALOG_LEFT,[theme-dark='5'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='5'] .jimi-black-item,[theme-dark='5'] .jimi-blocked-users-tag,[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='5'] #JIMI_DIALOG_RIGHT,[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='5'] #JIMI_HIDDEN .jimi-title,[theme-dark='5'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='5'] .jimi-form-box{background:#312e2e}[theme-dark='5'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div{color:#b8b7b7}[theme-dark='5'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='5'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='5'] #JIMI_BACKGROUND_DARK .jimi-background-item-name{color:#989796}[theme-dark='5'] .jimi-switch{background:#474443}[theme-dark='5'] #JIMI_DIALOG_MENU>div.target,[theme-dark='5'] .jimi-switch:checked{background:#570d0d}[theme-dark='5'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='5'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#570d0d}[theme-dark='5'] #JIMI_DEFAULT_SELF a,[theme-dark='5'] .jimi-zhihu-key a,[theme-dark='5'] #JIMI_HISTORY_LIST a:hover,[theme-dark='5'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='5'] .jimi-black-item a:hover,[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='5'] .jimi-in-blocked-user-tag{color:#570d0d !important}[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,255,255,0.08)}[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#570d0d}[theme-dark='5'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#570d0d}[theme-dark='5'] .jimi-form-box{border-color:#514e4e}[theme-dark='5'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='5'] .key-shadow{background:#383534}[theme-dark='5'] #JIMI_DIALOG input[type='range']{background:#474443;box-shadow:inset 1px 1px 2px #474443,inset -1px -1px 2px #474443}[theme-dark='5'] #JIMI_DIALOG input[type='range']::before,[theme-dark='5'] #JIMI_DIALOG input[type='range']::after{background:#5a5958}[theme-dark='5'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb{background:#989797;border:1px solid #b0b0af}[theme-dark='5'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active{background:#b0b0af}[theme-dark='5'] .jimi-button:hover{color:#62605e}[theme-dark='6'] #JIMI_DIALOG{color:#dfdfdf;box-shadow:2px 2px 4px #4a4848,-2px -2px 4px #4a4848}[theme-dark='6'] #JIMI_DIALOG,[theme-dark='6'] #JIMI_DIALOG_LEFT,[theme-dark='6'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='6'] .jimi-black-item,[theme-dark='6'] .jimi-blocked-users-tag,[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='6'] #JIMI_DIALOG_RIGHT,[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR,[theme-dark='6'] #JIMI_HIDDEN .jimi-title,[theme-dark='6'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='6'] .jimi-form-box{background:#312e2e}[theme-dark='6'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div+div{color:#b8b7b7}[theme-dark='6'] #JIMI_BACKGROUND .jimi-background-item-name,[theme-dark='6'] #JIMI_BACKGROUND_LIGHT .jimi-background-item-name,[theme-dark='6'] #JIMI_BACKGROUND_DARK .jimi-background-item-name{color:#989796}[theme-dark='6'] .jimi-switch{background:#474443}[theme-dark='6'] #JIMI_DIALOG_MENU>div.target,[theme-dark='6'] .jimi-switch:checked{background:#093333}[theme-dark='6'] #JIMI_BACKGROUND .jimi-background-item input:checked+div+div,[theme-dark='6'] #JIMI_TITLE_ICO label input:checked+img,[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#093333}[theme-dark='6'] #JIMI_DEFAULT_SELF a,[theme-dark='6'] .jimi-zhihu-key a,[theme-dark='6'] #JIMI_HISTORY_LIST a:hover,[theme-dark='6'] #JIMI_HISTORY_VIEW a:hover,[theme-dark='6'] .jimi-black-item a:hover,[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover,[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='6'] .jimi-in-blocked-user-tag{color:#093333 !important}[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{background:rgba(255,255,255,0.08)}[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#093333}[theme-dark='6'] #JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline-color:#093333}[theme-dark='6'] .jimi-form-box{border-color:#514e4e}[theme-dark='6'] .jimi-form-box .jimi-form-box-item::after,[theme-dark='6'] .key-shadow{background:#383534}[theme-dark='6'] #JIMI_DIALOG input[type='range']{background:#474443;box-shadow:inset 1px 1px 2px #474443,inset -1px -1px 2px #474443}[theme-dark='6'] #JIMI_DIALOG input[type='range']::before,[theme-dark='6'] #JIMI_DIALOG input[type='range']::after{background:#5a5958}[theme-dark='6'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb{background:#989797;border:1px solid #b0b0af}[theme-dark='6'] #JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active{background:#b0b0af}[theme-dark='6'] .jimi-button:hover{color:#62605e}.jimi-button{outline:none;position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;user-select:none;touch-action:manipulation;font-size:13px;height:24px;padding:0px 8px;border-radius:4px;border:1px solid transparent;background-color:#fff;border-color:rgba(150,162,170,0.4);font-weight:400;box-sizing:border-box}.jimi-button:hover{font-weight:600;background:#eeeeee}.jimi-button:active{background:#e0e0e0;font-weight:400}.jimi-button.jimi-button-primary{background:#007aff;color:#fff;border-color:transparent}.jimi-button.jimi-button-primary:hover{background:#0040dd}.jimi-button.jimi-button-primary:active{background:#007aff}.jimi-button-red{color:#ff3b30 !important;border:1px solid #ff3b30 !important}.jimi-button-red:hover{color:#ff453a !important;border:1px solid #ff453a !important}.jimi-button:disabled{border-color:#d0d0d0;background-color:rgba(0,0,0,0.08);color:#b0b0b0;cursor:not-allowed}.Profile-mainColumn,.Collections-mainColumn,.CollectionsDetailPage-mainColumn{flex:1}#root .css-1liaddi{margin-right:0}.ContentItem-title div{display:inline}.css-1acwmmj:empty{display:none !important}.css-hr0k1l::after{content:'点击键盘左、右按键切换图片';position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff}.HotLanding-contentItemCount.HotLanding-contentItemCountWithoutSub{margin-top:12px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']{position:fixed;bottom:50px;background:#fff;padding:6px 12px;box-shadow:0 2px 8px #c9c9c9,0 -2px 8px #ffffff;border-radius:8px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:hover{background:#fff;color:#007aff !important;font-weight:600}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:active{font-weight:200 !important}.Topstory-container,.css-knqde,.Search-container{width:fit-content !important}.QuestionPage .Question-mainColumn,.QuestionHeader-main{flex:1}.QuestionPage{padding:0}.QuestionPage .List-item{border-bottom:1px dashed #ddd}.QuestionPage .Question-mainColumn{width:initial}.Post-Row-Content .Post-Row-Content-right{width:auto}.QuestionHeader{min-width:auto}.QuestionHeader .QuestionHeader-content{margin:0 auto;padding:0;max-width:initial !important}.GifPlayer.isPlaying img{cursor:pointer !important}.AppHeader-inner{margin:0 auto !important;padding:0 !important;min-width:min-content !important;width:fit-content !important}.zhuanlan .Post-Row-Content-left{flex:1}.zhuanlan .Post-Row-Content-right{margin-left:10px}.zhuanlan .css-1pariuy,.zhuanlan .css-44kk6u{max-width:none}.zhuanlan .css-9w3zhd,.zhuanlan .css-12tmx22,.zhuanlan .css-1bcbfml{width:auto}.Topstory-content>div{width:auto !important}#JIMI_DIALOG{transition-property:transform;transition-duration:500ms;transition-timing-function:cubic-bezier(.2, 0, 0, 1);position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);transition-property:height;width:800px;height:600px;max-width:100vw;max-height:100vh;border-radius:8px;box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb;background:#e0e0e0;flex-direction:column;overflow:hidden;z-index:202;font-size:13px;border:1px solid rgba(142,142,147,0.1)}#JIMI_DIALOG input[type='text'],#JIMI_EXTRA_OUTPUT_DIALOG input[type='text'],#JIMI_DIALOG input[type='number'],#JIMI_EXTRA_OUTPUT_DIALOG input[type='number'],#JIMI_DIALOG textarea,#JIMI_EXTRA_OUTPUT_DIALOG textarea{box-sizing:border-box;margin:0;padding:1px 4px;font-size:13px;line-height:1.5;list-style:none;position:relative;display:inline-block;min-width:0;border:1px solid rgba(150,162,170,0.4);border-radius:4px;transition:all .2s;background:transparent}#JIMI_DIALOG label,#JIMI_EXTRA_OUTPUT_DIALOG label{cursor:pointer;transition:all .2s}#JIMI_DIALOG label:hover,#JIMI_EXTRA_OUTPUT_DIALOG label:hover{color:#007aff !important}#JIMI_DIALOG label .jimi-i[type='checkbox']~div,#JIMI_EXTRA_OUTPUT_DIALOG label .jimi-i[type='checkbox']~div{margin-left:8px;display:inline-block}#JIMI_DIALOG ::-webkit-scrollbar,#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar{width:8px;height:8px;background:transparent}#JIMI_DIALOG ::-webkit-scrollbar-track,#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-track{border-radius:0}#JIMI_DIALOG ::-webkit-scrollbar-thumb,#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb{background:#bbb;transition:all .2s;border-radius:8px}#JIMI_DIALOG ::-webkit-scrollbar-thumb:hover,#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb:hover{background-color:rgba(95,95,95,0.7)}#JIMI_DIALOG a,#JIMI_EXTRA_OUTPUT_DIALOG a{transition:all .2s;text-decoration:none}#JIMI_DIALOG .jimi-button,#JIMI_EXTRA_OUTPUT_DIALOG .jimi-button{min-width:68px}#JIMI_DIALOG_LEFT{width:160px;display:flex;flex-direction:column;overflow:hidden;background:#e0e0e0}#JIMI_DIALOG_MENU{flex:1;overflow:hidden auto;padding:8px 12px 0}#JIMI_DIALOG_MENU>div{box-sizing:border-box;line-height:38px;padding-left:12px;border-radius:6px;font-size:13px;margin-bottom:2px;cursor:pointer}#JIMI_DIALOG_MENU>div:active{font-weight:200 !important}#JIMI_DIALOG_MENU>div:hover{background:rgba(77,66,86,0.08)}#JIMI_DIALOG_MENU>div.target{color:#fff !important;background:#007aff}#JIMI_DIALOG_RIGHT{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#ededec}#JIMI_DIALOG_RIGHT_TITLE{height:52px;line-height:52px;font-size:16px;font-weight:600;box-sizing:border-box;padding:0 18px;border-bottom:1px solid rgba(150,162,170,0.2);display:flex}#JIMI_DIALOG_RIGHT_TITLE .jimi-right-title-content{flex:1}#JIMI_DIALOG_RIGHT_TITLE .jimi-right-title-content div>span{font-size:12px;color:#ff3b30;padding-left:8px}#JIMI_DIALOG_RIGHT_ANCHOR{flex:0 0 auto;gap:2px;overflow-x:auto;overflow-y:hidden;box-sizing:border-box;padding:6px 18px 0;border-bottom:1px solid rgba(150,162,170,0.2);background:#ededec}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item{position:relative;border:0;border-radius:6px 6px 0 0;padding:0 12px;height:34px;line-height:34px;font-size:13px;font-family:inherit;white-space:nowrap;cursor:pointer;color:inherit;background:transparent;transition:all .2s;appearance:none}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item::after{content:'';position:absolute;right:10px;bottom:-1px;left:10px;height:2px;border-radius:2px;background:transparent;transition:all .2s}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:hover{color:#007aff;background:rgba(77,66,86,0.08)}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target{color:#007aff;font-weight:600;background:rgba(0,122,255,0.1)}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item.target::after{background:#007aff}#JIMI_DIALOG_RIGHT_ANCHOR .jimi-right-anchor-item:focus-visible{outline:1px solid #007aff;outline-offset:-2px}#JIMI_DIALOG_MAIN{flex:1;overflow-y:auto}#JIMI_DIALOG_MAIN>div{box-sizing:border-box;width:100%;padding:18px}#JIMI_DIALOG_CONTENT{flex:1;display:flex;overflow:hidden}.jimi-zhihu-key a{color:#007aff !important}.jimi-zhihu-key a:hover{color:#bbb !important}.jimi-default-bottom a,.jimi-config-buttons a,.jimi-default-bottom button,.jimi-config-buttons button{margin-left:8px;width:100px}#JIMI_OPEN_CLOSE{transition-property:none;transition-duration:300ms;transition-timing-function:cubic-bezier(.2, 0, 0, 1);user-select:none;width:48px;height:48px;display:flex;align-items:center;justify-content:center;text-align:center;background:rgba(150,162,170,0.4);border-radius:8px;opacity:.8;font-size:44px;cursor:pointer;z-index:201;position:fixed;bottom:0;right:0;box-sizing:border-box;border:2px solid rgba(150,162,170,0.2)}#JIMI_OPEN_CLOSE:hover{opacity:1}#JIMI_LEFT_BUTTONS{margin:8px 0 0 8px}#JIMI_LEFT_BUTTONS button{height:22px;border-radius:4px;padding:0;border:0;font-size:12px;color:#fff;width:70px}#JIMI_LEFT_BUTTONS [name='dialogClose']{background:#fe6059}#JIMI_LEFT_BUTTONS [name='dialogClose']:hover{background:#d70015;color:#fff !important;font-weight:600}#JIMI_LEFT_BUTTONS [name='dialogBig']{background:#27c93f}#JIMI_LEFT_BUTTONS [name='dialogBig']:hover{background:#007d1b;color:#fff !important;font-weight:600}.gear{width:24px;height:24px;position:relative;border-radius:50%;box-sizing:border-box;border:6px solid #8e8e93;background:transparent}.gear_line_1,.gear_line_2,.gear_line_3,.gear_line_4{position:absolute;box-sizing:border-box;width:30px;height:6px;border-radius:2px;border-left:6px solid #8e8e93;border-right:6px solid #8e8e93;left:50%;top:50%;transform:translate(-50%, -50%)}.gear_line_2{transform:translate(-50%, -50%) rotate(45deg)}.gear_line_3{transform:translate(-50%, -50%) rotate(90deg)}.gear_line_4{transform:translate(-50%, -50%) rotate(135deg)}#JIMI_EXTRA_OUTPUT_COVER{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);width:800px;height:600px;background:rgba(0,0,0,0.4);z-index:203;border-radius:8px}#JIMI_EXTRA_OUTPUT_DIALOG{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);z-index:204;background:#ededec;border-radius:8px;overflow:hidden;min-width:420px;border:1px solid rgba(142,142,147,0.1);box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer{text-align:right;padding:14px;border-top:1px solid rgba(142,142,147,0.1)}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer button{margin-left:12px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-title{padding-left:14px;height:auto;font-size:16px}#JIMI_EXTRA_OUTPUT_DIALOG>div{padding-top:4px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name{width:420px;padding:0 14px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name input[name='blocked-user-tag-name']{width:100%}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags{width:600px;padding:6px 6px 6px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span{cursor:pointer;display:inline-block;border-radius:6px;margin:0 8px 8px 0;border:1px solid rgba(150,162,170,0.4);padding:0 8px;background:#fff}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span:hover{background:rgba(77,66,86,0.08);color:#007aff !important;font-weight:600}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span[data-choose='true']{color:#007aff;border-color:#007aff;background:rgba(0,122,255,0.1)}.jimi-zhida{color:#09408e;margin:0 2px}.jimi-zhida span{font-size:10px;display:inline-block;vertical-align:top;height:15px;line-height:15px}#JIMI_HIDDEN,#JIMI_VERSION,#JIMI_FILTER{padding-top:0 !important}#JIMI_HIDDEN .jimi-title,#JIMI_FILTER .jimi-title{position:sticky;top:0;margin:0 -18px;padding:0 18px 0 28px;background:#ededec;z-index:1}#JIMI_NOT_INTERESTED_LIST>div{display:block;line-height:24px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item{cursor:pointer;margin-left:6px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item:hover{color:#007aff}.jimi-radio-group{display:flex}.jimi-radio-group label{cursor:pointer;position:relative;margin:0 !important}.jimi-radio-group label div{box-sizing:border-box;padding:0 8px;height:24px;display:flex;align-items:center;justify-content:center;border-top:1px solid rgba(150,162,170,0.4);border-bottom:1px solid rgba(150,162,170,0.4);position:relative}.jimi-radio-group label div::after{content:'';position:absolute;height:100%;width:1px;background:rgba(150,162,170,0.4);right:0;top:0}.jimi-radio-group label:first-of-type div{border-radius:8px 0 0 8px;border-left:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:first-of-type div::before{display:none}.jimi-radio-group label:last-of-type div{border-radius:0 8px 8px 0;border-right:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:last-of-type div::after{display:none}.jimi-radio-group label:hover div{background:rgba(0,122,255,0.1)}.jimi-radio-group input{visibility:hidden;position:absolute}.jimi-radio-group input:checked+div{background:#007aff;color:#fff;border-color:#007aff;z-index:1}.jimi-radio-group input:checked+div::after{background:#007aff;z-index:1}.jimi-radio-group input:checked+div::before{content:'';position:absolute;height:100%;width:1px;background:#007aff;left:0;top:0;z-index:1}.jimi-radio{display:inline-block;padding-left:24px;line-height:24px}.jimi-radio input[type='radio']{display:none}.jimi-radio input[type='radio']+div{position:relative;cursor:pointer}.jimi-radio input[type='radio']+div::before{content:'';position:absolute;left:-20px;top:4px;border-radius:50%;border:1px solid #cecece;width:14px;height:14px;background:#fff;box-shadow:inset 5px 5px 5px #f0f0f0,inset -5px -5px 5px #ffffff}.jimi-radio input[type='radio']+div::after{content:'';position:absolute;left:-16px;top:8px;border-radius:50%;width:8px;height:8px}.jimi-radio input[type='radio']:checked+div::before{background:#007aff;border-color:#007aff;box-shadow:none}.jimi-radio input[type='radio']:checked+div::after{background:#fff}.jimi-radio input[type='radio']:focus+div::before{box-shadow:0 0 8px #007aff}.jimi-radio input[type='radio']:disabled+div::before{border:1px solid #cecece;box-shadow:0 0 4px #ddd}.jimi-i:not(.jimi-switch)[type='checkbox']{appearance:none;-webkit-appearance:none;-moz-appearance:none;-ms-appearance:none;-o-appearance:none;transition:all .2s;width:22px;height:22px;margin:0;position:relative;border-radius:4px;box-sizing:border-box;border:none;cursor:pointer}.jimi-i:not(.jimi-switch)[type='checkbox']::after{cursor:pointer;transition:all .2s;content:' ';width:22px;height:22px;border-radius:4px;border:1px solid rgba(150,162,170,0.4);box-sizing:border-box;left:0px;top:0px;z-index:1;position:absolute;font-weight:600;display:flex;align-items:center;justify-content:center}.jimi-i:not(.jimi-switch)[type='checkbox']:hover::after{border-color:#007aff}.jimi-i:not(.jimi-switch)[type='checkbox']:checked::after{content:'✓';font-size:16px;font-weight:600;color:#fff;background:#007aff;border-color:#007aff}.jimi-checkbox-group label{display:inline-flex !important;padding-right:12px}.jimi-checkbox-group label div{margin-right:12px}.jimi-checkbox-group label::after{content:'';height:12px;width:1px;background:rgba(150,162,170,0.4)}.jimi-checkbox-group label:last-of-type::after{display:none}.jimi-tooltip{position:relative;display:inline-block;margin-left:4px}.jimi-tooltip>span:first-child{display:inline-block;font-size:12px;border-radius:50%;border:1px solid #98989d;color:#98989d;width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.jimi-tooltip>span:last-child{display:none;position:absolute;top:30px;left:-50px;background-color:#515151;color:#fff;padding:8px 12px;z-index:10;border-radius:6px;width:max-content;line-height:24px}.jimi-tooltip>span:last-child::after{content:'';width:0;height:0;position:absolute;border-bottom:6px solid #515151;border-left:8px solid transparent;border-right:8px solid transparent;top:-6px;left:50px}.jimi-tooltip:hover>span:first-child{border-color:#007aff;color:#007aff}.jimi-tooltip:hover>span:last-child{display:block}.jimi-form-box{background:#e9e9e8;border:1px solid #dfdfde;border-radius:8px;margin-bottom:14px}.jimi-form-box-item{display:flex;padding:8px 12px;min-height:24px;position:relative}.jimi-form-box-item>div:first-of-type{flex:1;line-height:24px;word-break:keep-all;padding-right:12px}.jimi-form-box-item>div:nth-child(2){display:flex;flex-wrap:wrap;align-items:center}.jimi-form-box-item::after{content:'';position:absolute;background:#e0e0df;height:1px;width:96%;bottom:0;left:50%;transform:translateX(-50%)}.jimi-form-box-item:last-of-type::after{display:none}.jimi-form-box-item-vertical{display:block}.jimi-form-box-item-vertical>div:nth-child(2){display:block;padding-top:4px;font-size:12px;color:#999}.jimi-title{font-weight:bold;font-size:13px;display:flex;align-items:center;height:42px;line-height:42px;padding-left:10px}.jimi-title>span{font-size:12px;color:#999;padding-left:8px}.jimi-title>span b{color:#ff3b30}.jimi-switch{width:40px;height:24px;position:relative;background-color:#dcdfe6;border-radius:6px;background-clip:content-box;display:inline-block;appearance:none;-webkit-appearance:none;-moz-appearance:none;user-select:none;outline:none;margin:0;cursor:pointer}.jimi-switch::before{content:'';position:absolute;width:22px;height:22px;background-color:#ffffff;border-radius:5px;left:2px;top:0;bottom:0;margin:auto;transition:.3s}.jimi-switch:checked{background-color:#007aff;transition:.6s}.jimi-switch:checked::before{left:17px;transition:.3s}.jimi-switch:hover::before{background:#f0f0f0}.jimi-switch:disabled{opacity:.45;cursor:not-allowed}.jimi-fetch-intercept .jimi-need-fetch{display:none}.jimi-fetch-intercept.jimi-fetch-intercept-close{color:#b0b0b0 !important;cursor:not-allowed !important;text-decoration:line-through}.jimi-fetch-intercept.jimi-fetch-intercept-close span.jimi-need-fetch{display:inline}.jimi-fetch-intercept.jimi-fetch-intercept-close div.jimi-need-fetch{display:block}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-more,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-action{cursor:not-allowed !important}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-more:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-action:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item a:hover{background:transparent !important;color:#b0b0b0 !important}.jimi-fetch-intercept.jimi-fetch-intercept-close:hover{color:#b0b0b0 !important}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-switch{background-color:rgba(0,0,0,0.08);cursor:not-allowed !important}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-switch::before{background:#ffffff !important}#JIMI_DIALOG input[type='range']{outline:none;-webkit-appearance:none;-moz-appearance:none;appearance:none;height:6px;border-radius:8px;background:#dddddc;position:relative;box-shadow:inset 1px 1px 2px #d4d4d3,inset -1px -1px 2px #d4d4d3}#JIMI_DIALOG input[type='range']::before,#JIMI_DIALOG input[type='range']::after{content:'';background:#c6c6c5;position:absolute;height:10px;width:3px;border-radius:4px;top:-2px}#JIMI_DIALOG input[type='range']::before{left:-2px}#JIMI_DIALOG input[type='range']::after{right:-2px}#JIMI_DIALOG input[type='range']::-webkit-slider-thumb{-webkit-appearance:none;-moz-appearance:none;appearance:none;transition:all .2s;width:10px;height:25px;border-radius:16px;background:#fff;border:1px solid #c7c7c6;z-index:5}#JIMI_DIALOG input[type='range']::-webkit-slider-thumb:active{background:#f0f0f0}.jimi-select{position:relative;width:fit-content}.jimi-select-input{background:transparent;text-align:right;height:22px;border-radius:6px;border:1px solid transparent;padding:0 8px;line-height:22px;cursor:pointer}.jimi-select-input:hover{background:#ffffff;border:1px solid #e0e0e0}.jimi-select-icon{margin-left:4px}.jimi-option-box{position:absolute;top:24px;right:0;background:#e9e9e8;z-index:10;padding:6px;border-radius:6px;border:1px solid #e0e0e0;box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}.jimi-option-item{white-space:pre;cursor:default;padding:0 6px 0 24px;border-radius:4px;height:24px;line-height:24px;position:relative}.jimi-option-item:hover{color:#fff;background:#007aff}.jimi-option-item[data-choose="true"]::before{content:'✓';position:absolute;left:6px}#JIMI_BACKGROUND{gap:12px}.jimi-background-item{position:relative}.jimi-background-item input{position:absolute;visibility:hidden}.jimi-background-item input:checked+div+div{border-color:#007aff}.jimi-background-item input:checked+div+div+div{color:#272726}.jimi-background-item .jimi-background-item-div{border-radius:8px;height:46px;width:68px;margin:4px}.jimi-background-item .jimi-background-item-border{height:46px;width:68px;border-radius:12px;position:absolute;top:0;left:0;border:4px solid transparent}.jimi-background-item-name{font-size:12px;text-align:center;padding-top:8px;color:#777776}#JIMI_BACKGROUND_LIGHT,#JIMI_BACKGROUND_DARK{gap:10px;padding:4px 4px 24px 0}#JIMI_BACKGROUND_LIGHT .jimi-background-item,#JIMI_BACKGROUND_DARK .jimi-background-item{position:relative}#JIMI_BACKGROUND_LIGHT .jimi-background-item input,#JIMI_BACKGROUND_DARK .jimi-background-item input{position:absolute;visibility:hidden}#JIMI_BACKGROUND_LIGHT .jimi-background-item input:checked+div+div,#JIMI_BACKGROUND_DARK .jimi-background-item input:checked+div+div,#JIMI_BACKGROUND_LIGHT .jimi-background-item input:checked+div+div+div,#JIMI_BACKGROUND_DARK .jimi-background-item input:checked+div+div+div{opacity:1}#JIMI_BACKGROUND_LIGHT .jimi-background-item-div,#JIMI_BACKGROUND_DARK .jimi-background-item-div{height:18px;width:18px;border-radius:50%;margin:0}#JIMI_BACKGROUND_LIGHT .jimi-background-item-border,#JIMI_BACKGROUND_DARK .jimi-background-item-border{height:calc(18px - (4px * 2));width:calc(18px - (4px * 2));border-radius:50%;position:absolute;top:0;left:0;background:#fff;opacity:0}#JIMI_BACKGROUND_LIGHT .jimi-background-item-name,#JIMI_BACKGROUND_DARK .jimi-background-item-name{font-size:12px;text-align:center;padding-top:8px;color:#777776;opacity:0;position:absolute;word-break:keep-all;left:50%;transform:translateX(-50%)}#JIMI_DEFAULT_SELF a{color:#007aff}#JIMI_DEFAULT_SELF a:hover{color:#bbb}#JIMI_BLOCK_WORDS{padding-top:0 !important}.jimi-block-words-content{display:flex;flex-wrap:wrap;cursor:default;margin-bottom:-4px}.jimi-block-words-content>span{padding:0px 6px;border-radius:4px;font-size:13px;margin:0 4px 4px 0;border:1px solid rgba(150,162,170,0.4);cursor:pointer;background:#fff}.jimi-block-words-content>span:hover{color:#ff3b30;border-color:#ff3b30}#JIMI_BLOCKED_USERS,#JIMI_LOCAL_BLOCKED_USERS,#JIMI_BLOCKED_USERS_TAGS{display:flex;flex-wrap:wrap;margin:0 -8px -8px 0}.jimi-black-item{height:24px;line-height:24px;box-sizing:content-box;padding:2px 6px;margin:0 8px 8px 0;display:flex;align-items:center;position:relative;border-radius:4px;border:1px solid #8e8e93;background:#fff;transition:all .2s}.jimi-black-item a:hover{color:#007aff}.jimi-black-item .jimi-black-item-more{width:24px;height:24px;text-align:center;border-radius:4px;cursor:pointer;font-style:normal;margin-left:4px}.jimi-black-item .jimi-black-item-more:hover{background:rgba(142,142,147,0.1)}.jimi-black-item[data-menu-open='true']{z-index:4}.jimi-black-item-menu{position:fixed;z-index:10001;min-width:128px;padding:4px 0;border:1px solid #8e8e93;border-radius:4px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12)}.jimi-black-item-menu span{display:block;height:28px;line-height:28px;padding:0 10px;white-space:nowrap;cursor:pointer}.jimi-black-item-menu span:hover{background:rgba(142,142,147,0.1);color:#007aff}.jimi-black-box>button,.jimi-button-black{margin-left:8px}.jimi-blocked-users-tag{height:24px;line-height:24px;box-sizing:content-box;padding:0 6px;margin:0 8px 8px 0;display:flex;align-items:center;border-radius:6px;border:1px solid #8e8e93;background:#fff}.jimi-remove-blocked-tag:hover{color:#ff3b30;font-weight:600}.jimi-remove-blocked-tag:active{font-weight:200 !important}.jimi-black-tag{padding:0 6px;background:#000;color:#fff;font-size:12px;border-radius:4px;margin-left:8px;display:inline-block;line-height:22px}.jimi-blocked-content-replacement{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jimi-blocked-content-replacement .jimi-black-tag{vertical-align:middle}.jimi-blocked-content-replacement-text{display:inline-block;line-height:22px}.jimi-in-blocked-user-tag{margin-left:4px;border-radius:4px;font-size:12px;border:1px solid #007aff;color:#007aff;background:rgba(0,122,255,0.1);height:16px;line-height:16px;padding:0 4px}.jimi-edit-blocked-tag{display:inline-block;font-size:13px;margin-left:4px;cursor:pointer}.jimi-edit-blocked-tag:hover{font-weight:600 !important;color:#007aff}.jimi-edit-blocked-tag:active{font-weight:200 !important}.jimi-block-user-box button{font-size:12px;margin-left:8px}.jimi-set-content:not(.jimi-flex-wrap)>div,.jimi-set-content:not(.jimi-flex-wrap)>label{margin-bottom:18px}.jimi-commit{font-size:12px;color:#999}.jimi-commit b{color:#ff3b30}.jimi-flex-wrap{display:flex;flex-wrap:wrap;min-height:24px;align-items:center}.jimi-flex-wrap label{margin-right:4px;display:flex;align-items:center}.jimi-flex-wrap label input[type='radio']{margin:0 4px 0 0}.jimi-video-download{position:absolute;top:20px;left:20px;font-size:24px;color:#fff;cursor:pointer}.jimi-loading{animation:loadingAnimation 2s infinite;font-size:24px;color:#91919d;cursor:none}@keyframes loadingAnimation{from{transform:rotate(0)}to{transform:rotate(360deg)}}.jimi-preview{box-sizing:border-box;position:fixed;height:100%;width:100%;top:0;left:0;overflow-y:auto;z-index:200;background-color:rgba(18,18,18,0.4)}.jimi-preview div{display:flex;justify-content:center;align-items:center;min-height:100%;width:100%}.jimi-preview div img{cursor:zoom-out;user-select:none}#JIMI_TITLE_ICO label input{display:none}#JIMI_TITLE_ICO label input:checked+img{border-color:#007aff}#JIMI_TITLE_ICO label img{width:28px;height:28px;border:4px solid transparent;border-radius:8px}#JIMI_TITLE_ICO label:hover img{border-color:#e0e0e0}.jimi-question-time{font-size:13px !important;font-weight:normal !important;line-height:24px}.jimi-stop-scroll{height:100% !important;overflow:hidden !important}.jimi-export-collection-box{float:right;text-align:right}.jimi-export-collection-box p{font-size:13px;color:#666;margin:4px 0}.jimi-people-export-progress{display:inline-flex;align-items:center;gap:6px;margin-left:8px;color:#666;font-size:12px;vertical-align:middle}.jimi-people-export-progress-track{display:inline-block;width:90px;height:6px;overflow:hidden;border-radius:4px;background:#e5e5e5}.jimi-people-export-progress-bar{display:block;width:0;height:100%;transition:width .2s;background:#007aff}.jimi-pdf-dialog-item{padding:12px;border-bottom:1px solid #eee;margin:12px;background:#ffffff}.jimi-pdf-dialog-title{margin:0 0 1.4em;font-size:20px;font-weight:bold}.jimi-pdf-box-content{width:100%;background:#ffffff}.jimi-pdf-view{width:100%;background:#ffffff;word-break:break-all;white-space:pre-wrap;font-size:13px;overflow-x:hidden}.jimi-pdf-view a{color:#0066ff}.jimi-pdf-view img{max-width:100%}.jimi-pdf-view p{margin:1.4em 0}#JIMI_SUSPENSION_SWITCH{position:fixed;z-index:10;overflow:hidden;border-radius:6px}#JIMI_SUSPENSION_SWITCH>a{display:block;width:36px;height:36px;line-height:36px;text-align:center;background-color:rgba(255,255,255,0.8);color:#333;font-size:16px;cursor:pointer;border:1px solid #e0e0e0;border-top:none}#JIMI_SUSPENSION_SWITCH>a:first-of-type{border-top-left-radius:6px;border-top-right-radius:6px;border-top:1px solid #e0e0e0}#JIMI_SUSPENSION_SWITCH>a:last-of-type{border-bottom-left-radius:6px;border-bottom-right-radius:6px}#JIMI_SUSPENSION_SWITCH>a:hover{font-weight:bold;color:#fff;background:#005ce6}#JIMI_SUSPENSION_SWITCH:hover .lock-icon{display:block}#JIMI_SUSPENSION_SWITCH .lock-icon{font-size:18px;width:36px;height:36px;line-height:36px;text-align:center;display:none;cursor:pointer;z-index:2;position:relative;border-radius:50%}#JIMI_SUSPENSION_SWITCH .lock-icon:hover{background:rgba(0,0,0,0.4)}#JIMI_SUSPENSION_SWITCH .move-mock{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1;display:none;top:0;left:0;cursor:pointer}.key-shadow{border:1px solid #e0e0e0;border-radius:4px;box-shadow:rgba(0,0,0,0.06) 0 1px 1px 0;font-weight:600;min-width:26px;height:26px;padding:0px 6px;text-align:center;margin:0 4px}#JIMI_HISTORY_LIST a,#JIMI_HISTORY_VIEW a{word-break:break-all;display:block;margin-bottom:8px;padding:6px 12px;border:1px solid rgba(150,162,170,0.4);border-radius:8px;cursor:pointer}#JIMI_HISTORY_LIST a:hover,#JIMI_HISTORY_VIEW a:hover{background:rgba(77,66,86,0.08);color:#007aff !important;font-weight:600}.jimi-video-link{border:1px solid #ccc;display:inline-block;height:98px;width:fit-content;border-radius:4px;box-sizing:border-box;overflow:hidden;transition:all .3s}.jimi-video-link img{width:98px;height:98px;vertical-align:bottom}.jimi-video-link span{padding:4px 12px;display:inline-block}.jimi-video-link:hover{border-color:#005ce6;color:#005ce6}#JIMI_MESSAGE_BOX{position:fixed;left:0;top:10px;width:100%;z-index:1000}.jimi-message{margin:0 auto;width:500px;height:48px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;box-shadow:0 0 8px #d0d4d6,0 0 8px #e6eaec;margin-bottom:12px;background:#fff}#IMPORT_BY_FILE,#IMPORT_BLACK{display:inline-flex}#IMPORT_BY_FILE input,#IMPORT_BLACK input{display:none}#JIMI_FILTER_BLOCK_WORDS input,#JIMI_FILTER_BLOCK_WORDS_CONTENT input{width:100%}#JIMI_COVER{position:fixed;top:0;left:-200%;width:100%;height:100%;pointer-events:none}`;
+  var INNER_CSS = `.marginTB8{margin:8px 0}.PositionCenter{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%)}.CommonTransition{transition-property:transform;transition-duration:500ms;transition-timing-function:cubic-bezier(.2, 0, 0, 1)}[theme-light='1'] .jimi-black-item a:hover,[theme-light='1'] .jimi-black-item-action:hover,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff3b30 !important}[theme-light='1'] .jimi-in-blocked-user-tag,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff3b30;color:#ff3b30;background:rgba(255,59,48,0.1)}[theme-light='2'] .jimi-black-item a:hover,[theme-light='2'] .jimi-black-item-action:hover,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#a05a00 !important}[theme-light='2'] .jimi-in-blocked-user-tag,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#a05a00;color:#a05a00;background:rgba(160,90,0,0.1)}[theme-light='3'] .jimi-black-item a:hover,[theme-light='3'] .jimi-black-item-action:hover,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#007d1b !important}[theme-light='3'] .jimi-in-blocked-user-tag,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#007d1b;color:#007d1b;background:rgba(0,125,27,0.1)}[theme-light='4'] .jimi-black-item a:hover,[theme-light='4'] .jimi-black-item-action:hover,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#8e8e93 !important}[theme-light='4'] .jimi-in-blocked-user-tag,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#8e8e93;color:#8e8e93;background:rgba(142,142,147,0.1)}[theme-light='5'] .jimi-black-item a:hover,[theme-light='5'] .jimi-black-item-action:hover,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#af52de !important}[theme-light='5'] .jimi-in-blocked-user-tag,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#af52de;color:#af52de;background:rgba(175,82,222,0.1)}[theme-light='6'] .jimi-black-item a:hover,[theme-light='6'] .jimi-black-item-action:hover,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='6'] .jimi-in-blocked-user-tag,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-light='7'] .jimi-black-item a:hover,[theme-light='7'] .jimi-black-item-action:hover,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='7'] .jimi-in-blocked-user-tag,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-dark='0'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='1'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='2'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='3'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='4'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='7'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='0'] .jimi-black-item,[theme-dark='1'] .jimi-black-item,[theme-dark='2'] .jimi-black-item,[theme-dark='3'] .jimi-black-item,[theme-dark='4'] .jimi-black-item,[theme-dark='7'] .jimi-black-item,[theme-dark='0'] .jimi-blocked-users-tag,[theme-dark='1'] .jimi-blocked-users-tag,[theme-dark='2'] .jimi-blocked-users-tag,[theme-dark='3'] .jimi-blocked-users-tag,[theme-dark='4'] .jimi-blocked-users-tag,[theme-dark='7'] .jimi-blocked-users-tag,[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='0'] #JIMI_HIDDEN .jimi-title,[theme-dark='1'] #JIMI_HIDDEN .jimi-title,[theme-dark='2'] #JIMI_HIDDEN .jimi-title,[theme-dark='3'] #JIMI_HIDDEN .jimi-title,[theme-dark='4'] #JIMI_HIDDEN .jimi-title,[theme-dark='7'] #JIMI_HIDDEN .jimi-title,[theme-dark='0'] #JIMI_FILTER .jimi-title,[theme-dark='1'] #JIMI_FILTER .jimi-title,[theme-dark='2'] #JIMI_FILTER .jimi-title,[theme-dark='3'] #JIMI_FILTER .jimi-title,[theme-dark='4'] #JIMI_FILTER .jimi-title,[theme-dark='7'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#175ac0}[theme-dark='0'] .jimi-black-item a:hover,[theme-dark='1'] .jimi-black-item a:hover,[theme-dark='2'] .jimi-black-item a:hover,[theme-dark='3'] .jimi-black-item a:hover,[theme-dark='4'] .jimi-black-item a:hover,[theme-dark='7'] .jimi-black-item a:hover,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag{color:#175ac0 !important}[theme-dark='0'] .key-shadow,[theme-dark='1'] .key-shadow,[theme-dark='2'] .key-shadow,[theme-dark='3'] .key-shadow,[theme-dark='4'] .key-shadow,[theme-dark='7'] .key-shadow{background:#383534}[theme-dark='0'] .jimi-button:hover,[theme-dark='1'] .jimi-button:hover,[theme-dark='2'] .jimi-button:hover,[theme-dark='3'] .jimi-button:hover,[theme-dark='4'] .jimi-button:hover,[theme-dark='7'] .jimi-button:hover{color:#62605e}[theme-dark='5'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='5'] .jimi-black-item,[theme-dark='5'] .jimi-blocked-users-tag,[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='5'] #JIMI_HIDDEN .jimi-title,[theme-dark='5'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#570d0d}[theme-dark='5'] .jimi-black-item a:hover,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='5'] .jimi-in-blocked-user-tag{color:#570d0d !important}[theme-dark='5'] .key-shadow{background:#383534}[theme-dark='5'] .jimi-button:hover{color:#62605e}[theme-dark='6'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='6'] .jimi-black-item,[theme-dark='6'] .jimi-blocked-users-tag,[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='6'] #JIMI_HIDDEN .jimi-title,[theme-dark='6'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#093333}[theme-dark='6'] .jimi-black-item a:hover,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='6'] .jimi-in-blocked-user-tag{color:#093333 !important}[theme-dark='6'] .key-shadow{background:#383534}[theme-dark='6'] .jimi-button:hover{color:#62605e}.jimi-button{outline:none;position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;user-select:none;touch-action:manipulation;font-size:13px;height:24px;padding:0px 8px;border-radius:4px;border:1px solid transparent;background-color:#fff;border-color:rgba(150,162,170,0.4);font-weight:400;box-sizing:border-box}.jimi-button:hover{font-weight:600;background:#eeeeee}.jimi-button:active{background:#e0e0e0;font-weight:400}.jimi-button.jimi-button-primary{background:#007aff;color:#fff;border-color:transparent}.jimi-button.jimi-button-primary:hover{background:#0040dd}.jimi-button.jimi-button-primary:active{background:#007aff}.jimi-button-red{color:#ff3b30 !important;border:1px solid #ff3b30 !important}.jimi-button-red:hover{color:#ff453a !important;border:1px solid #ff453a !important}.jimi-button:disabled{border-color:#d0d0d0;background-color:rgba(0,0,0,0.08);color:#b0b0b0;cursor:not-allowed}.Profile-mainColumn,.Collections-mainColumn,.CollectionsDetailPage-mainColumn{flex:1}#root .css-1liaddi{margin-right:0}.ContentItem-title div{display:inline}.css-1acwmmj:empty{display:none !important}.css-hr0k1l::after{content:'点击键盘左、右按键切换图片';position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff}.HotLanding-contentItemCount.HotLanding-contentItemCountWithoutSub{margin-top:12px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']{position:fixed;bottom:50px;background:#fff;padding:6px 12px;box-shadow:0 2px 8px #c9c9c9,0 -2px 8px #ffffff;border-radius:8px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:hover{background:#fff;color:#007aff !important;font-weight:600}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:active{font-weight:200 !important}.Topstory-container,.css-knqde,.Search-container{width:fit-content !important}.QuestionPage .Question-mainColumn,.QuestionHeader-main{flex:1}.QuestionPage{padding:0}.QuestionPage .List-item{border-bottom:1px dashed #ddd}.QuestionPage .Question-mainColumn{width:initial}.Post-Row-Content .Post-Row-Content-right{width:auto}.QuestionHeader{min-width:auto}.QuestionHeader .QuestionHeader-content{margin:0 auto;padding:0;max-width:initial !important}.GifPlayer.isPlaying img{cursor:pointer !important}.AppHeader-inner{margin:0 auto !important;padding:0 !important;min-width:min-content !important;width:fit-content !important}.zhuanlan .Post-Row-Content-left{flex:1}.zhuanlan .Post-Row-Content-right{margin-left:10px}.zhuanlan .css-1pariuy,.zhuanlan .css-44kk6u{max-width:none}.zhuanlan .css-9w3zhd,.zhuanlan .css-12tmx22,.zhuanlan .css-1bcbfml{width:auto}.Topstory-content>div{width:auto !important}#JIMI_EXTRA_OUTPUT_DIALOG input[type='text'],#JIMI_EXTRA_OUTPUT_DIALOG input[type='number'],#JIMI_EXTRA_OUTPUT_DIALOG textarea{box-sizing:border-box;margin:0;padding:1px 4px;font-size:13px;line-height:1.5;list-style:none;position:relative;display:inline-block;min-width:0;border:1px solid rgba(150,162,170,0.4);border-radius:4px;transition:all .2s;background:transparent}#JIMI_EXTRA_OUTPUT_DIALOG label{cursor:pointer;transition:all .2s}#JIMI_EXTRA_OUTPUT_DIALOG label:hover{color:#007aff !important}#JIMI_EXTRA_OUTPUT_DIALOG label .jimi-i[type='checkbox']~div{margin-left:8px;display:inline-block}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar{width:8px;height:8px;background:transparent}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-track{border-radius:0}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb{background:#bbb;transition:all .2s;border-radius:8px}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb:hover{background-color:rgba(95,95,95,0.7)}#JIMI_EXTRA_OUTPUT_DIALOG a{transition:all .2s;text-decoration:none}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-button{min-width:68px}.jimi-default-bottom a,.jimi-config-buttons a,.jimi-default-bottom button,.jimi-config-buttons button{margin-left:8px;width:100px}#JIMI_LEFT_BUTTONS{margin:8px 0 0 8px}#JIMI_LEFT_BUTTONS button{height:22px;border-radius:4px;padding:0;border:0;font-size:12px;color:#fff;width:70px}#JIMI_LEFT_BUTTONS [name='dialogClose']{background:#fe6059}#JIMI_LEFT_BUTTONS [name='dialogClose']:hover{background:#d70015;color:#fff !important;font-weight:600}#JIMI_LEFT_BUTTONS [name='dialogBig']{background:#27c93f}#JIMI_LEFT_BUTTONS [name='dialogBig']:hover{background:#007d1b;color:#fff !important;font-weight:600}.gear{width:24px;height:24px;position:relative;border-radius:50%;box-sizing:border-box;border:6px solid #8e8e93;background:transparent}.gear_line_1,.gear_line_2,.gear_line_3,.gear_line_4{position:absolute;box-sizing:border-box;width:30px;height:6px;border-radius:2px;border-left:6px solid #8e8e93;border-right:6px solid #8e8e93;left:50%;top:50%;transform:translate(-50%, -50%)}.gear_line_2{transform:translate(-50%, -50%) rotate(45deg)}.gear_line_3{transform:translate(-50%, -50%) rotate(90deg)}.gear_line_4{transform:translate(-50%, -50%) rotate(135deg)}#JIMI_EXTRA_OUTPUT_COVER{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);width:800px;height:600px;background:rgba(0,0,0,0.4);z-index:203;border-radius:8px}#JIMI_EXTRA_OUTPUT_DIALOG{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);z-index:204;background:#ededec;border-radius:8px;overflow:hidden;min-width:420px;border:1px solid rgba(142,142,147,0.1);box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer{text-align:right;padding:14px;border-top:1px solid rgba(142,142,147,0.1)}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer button{margin-left:12px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-title{padding-left:14px;height:auto;font-size:16px}#JIMI_EXTRA_OUTPUT_DIALOG>div{padding-top:4px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name{width:420px;padding:0 14px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name input[name='blocked-user-tag-name']{width:100%}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags{width:600px;padding:6px 6px 6px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span{cursor:pointer;display:inline-block;border-radius:6px;margin:0 8px 8px 0;border:1px solid rgba(150,162,170,0.4);padding:0 8px;background:#fff}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span:hover{background:rgba(77,66,86,0.08);color:#007aff !important;font-weight:600}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span[data-choose='true']{color:#007aff;border-color:#007aff;background:rgba(0,122,255,0.1)}.jimi-zhida{color:#09408e;margin:0 2px}.jimi-zhida span{font-size:10px;display:inline-block;vertical-align:top;height:15px;line-height:15px}#JIMI_HIDDEN,#JIMI_VERSION,#JIMI_FILTER{padding-top:0 !important}#JIMI_HIDDEN .jimi-title,#JIMI_FILTER .jimi-title{position:sticky;top:0;margin:0 -18px;padding:0 18px 0 28px;background:#ededec;z-index:1}#JIMI_NOT_INTERESTED_LIST>div{display:block;line-height:24px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item{cursor:pointer;margin-left:6px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item:hover{color:#007aff}.jimi-radio-group{display:flex}.jimi-radio-group label{cursor:pointer;position:relative;margin:0 !important}.jimi-radio-group label div{box-sizing:border-box;padding:0 8px;height:24px;display:flex;align-items:center;justify-content:center;border-top:1px solid rgba(150,162,170,0.4);border-bottom:1px solid rgba(150,162,170,0.4);position:relative}.jimi-radio-group label div::after{content:'';position:absolute;height:100%;width:1px;background:rgba(150,162,170,0.4);right:0;top:0}.jimi-radio-group label:first-of-type div{border-radius:8px 0 0 8px;border-left:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:first-of-type div::before{display:none}.jimi-radio-group label:last-of-type div{border-radius:0 8px 8px 0;border-right:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:last-of-type div::after{display:none}.jimi-radio-group label:hover div{background:rgba(0,122,255,0.1)}.jimi-radio-group input{visibility:hidden;position:absolute}.jimi-radio-group input:checked+div{background:#007aff;color:#fff;border-color:#007aff;z-index:1}.jimi-radio-group input:checked+div::after{background:#007aff;z-index:1}.jimi-radio-group input:checked+div::before{content:'';position:absolute;height:100%;width:1px;background:#007aff;left:0;top:0;z-index:1}.jimi-checkbox-group label{display:inline-flex !important;padding-right:12px}.jimi-checkbox-group label div{margin-right:12px}.jimi-checkbox-group label::after{content:'';height:12px;width:1px;background:rgba(150,162,170,0.4)}.jimi-checkbox-group label:last-of-type::after{display:none}.jimi-form-box-item{display:flex;padding:8px 12px;min-height:24px;position:relative}.jimi-form-box-item>div:first-of-type{flex:1;line-height:24px;word-break:keep-all;padding-right:12px}.jimi-form-box-item>div:nth-child(2){display:flex;flex-wrap:wrap;align-items:center}.jimi-form-box-item::after{content:'';position:absolute;background:#e0e0df;height:1px;width:96%;bottom:0;left:50%;transform:translateX(-50%)}.jimi-form-box-item:last-of-type::after{display:none}.jimi-form-box-item-vertical{display:block}.jimi-form-box-item-vertical>div:nth-child(2){display:block;padding-top:4px;font-size:12px;color:#999}.jimi-title{font-weight:bold;font-size:13px;display:flex;align-items:center;height:42px;line-height:42px;padding-left:10px}.jimi-title>span{font-size:12px;color:#999;padding-left:8px}.jimi-title>span b{color:#ff3b30}.jimi-fetch-intercept .jimi-need-fetch{display:none}.jimi-fetch-intercept.jimi-fetch-intercept-close{color:#b0b0b0 !important;cursor:not-allowed !important;text-decoration:line-through}.jimi-fetch-intercept.jimi-fetch-intercept-close span.jimi-need-fetch{display:inline}.jimi-fetch-intercept.jimi-fetch-intercept-close div.jimi-need-fetch{display:block}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-more,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-action{cursor:not-allowed !important}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-more:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-action:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item a:hover{background:transparent !important;color:#b0b0b0 !important}.jimi-fetch-intercept.jimi-fetch-intercept-close:hover{color:#b0b0b0 !important}.jimi-select-input{background:transparent;text-align:right;height:22px;border-radius:6px;border:1px solid transparent;padding:0 8px;line-height:22px;cursor:pointer}.jimi-select-input:hover{background:#ffffff;border:1px solid #e0e0e0}.jimi-select-icon{margin-left:4px}.jimi-option-box{position:absolute;top:24px;right:0;background:#e9e9e8;z-index:10;padding:6px;border-radius:6px;border:1px solid #e0e0e0;box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}.jimi-option-item{white-space:pre;cursor:default;padding:0 6px 0 24px;border-radius:4px;height:24px;line-height:24px;position:relative}.jimi-option-item:hover{color:#fff;background:#007aff}.jimi-option-item[data-choose="true"]::before{content:'✓';position:absolute;left:6px}.jimi-background-item{position:relative}.jimi-background-item input{position:absolute;visibility:hidden}.jimi-background-item input:checked+div+div{border-color:#007aff}.jimi-background-item input:checked+div+div+div{color:#272726}.jimi-background-item .jimi-background-item-div{border-radius:8px;height:46px;width:68px;margin:4px}.jimi-background-item .jimi-background-item-border{height:46px;width:68px;border-radius:12px;position:absolute;top:0;left:0;border:4px solid transparent}.jimi-background-item-name{font-size:12px;text-align:center;padding-top:8px;color:#777776}#JIMI_BLOCK_WORDS{padding-top:0 !important}.jimi-block-words-content{display:flex;flex-wrap:wrap;cursor:default;margin-bottom:-4px}.jimi-block-words-content>span{padding:0px 6px;border-radius:4px;font-size:13px;margin:0 4px 4px 0;border:1px solid rgba(150,162,170,0.4);cursor:pointer;background:#fff}.jimi-block-words-content>span:hover{color:#ff3b30;border-color:#ff3b30}#JIMI_BLOCKED_USERS,#JIMI_LOCAL_BLOCKED_USERS,#JIMI_BLOCKED_USERS_TAGS{display:flex;flex-wrap:wrap;margin:0 -8px -8px 0}.jimi-black-item{height:24px;line-height:24px;box-sizing:content-box;padding:2px 6px;margin:0 8px 8px 0;display:flex;align-items:center;position:relative;border-radius:4px;border:1px solid #8e8e93;background:#fff;transition:all .2s}.jimi-black-item a:hover{color:#007aff}.jimi-black-item .jimi-black-item-more{width:24px;height:24px;text-align:center;border-radius:4px;cursor:pointer;font-style:normal;margin-left:4px}.jimi-black-item .jimi-black-item-more:hover{background:rgba(142,142,147,0.1)}.jimi-black-item[data-menu-open='true']{z-index:4}.jimi-black-item-menu{position:fixed;z-index:10001;min-width:128px;padding:4px 0;border:1px solid #8e8e93;border-radius:4px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12)}.jimi-black-item-menu span{display:block;height:28px;line-height:28px;padding:0 10px;white-space:nowrap;cursor:pointer}.jimi-black-item-menu span:hover{background:rgba(142,142,147,0.1);color:#007aff}.jimi-black-box>button,.jimi-button-black{margin-left:8px}.jimi-blocked-users-tag{height:24px;line-height:24px;box-sizing:content-box;padding:0 6px;margin:0 8px 8px 0;display:flex;align-items:center;border-radius:6px;border:1px solid #8e8e93;background:#fff}.jimi-remove-blocked-tag:hover{color:#ff3b30;font-weight:600}.jimi-remove-blocked-tag:active{font-weight:200 !important}.jimi-black-tag{padding:0 6px;background:#000;color:#fff;font-size:12px;border-radius:4px;margin-left:8px;display:inline-block;line-height:22px}.jimi-blocked-content-replacement{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jimi-blocked-content-replacement .jimi-black-tag{vertical-align:middle}.jimi-blocked-content-replacement-text{display:inline-block;line-height:22px}.jimi-in-blocked-user-tag{margin-left:4px;border-radius:4px;font-size:12px;border:1px solid #007aff;color:#007aff;background:rgba(0,122,255,0.1);height:16px;line-height:16px;padding:0 4px}.jimi-edit-blocked-tag{display:inline-block;font-size:13px;margin-left:4px;cursor:pointer}.jimi-edit-blocked-tag:hover{font-weight:600 !important;color:#007aff}.jimi-edit-blocked-tag:active{font-weight:200 !important}.jimi-block-user-box button{font-size:12px;margin-left:8px}.jimi-commit{font-size:12px;color:#999}.jimi-commit b{color:#ff3b30}.jimi-flex-wrap{display:flex;flex-wrap:wrap;min-height:24px;align-items:center}.jimi-flex-wrap label{margin-right:4px;display:flex;align-items:center}.jimi-flex-wrap label input[type='radio']{margin:0 4px 0 0}.jimi-video-download{position:absolute;top:20px;left:20px;font-size:24px;color:#fff;cursor:pointer}.jimi-loading{animation:loadingAnimation 2s infinite;font-size:24px;color:#91919d;cursor:none}@keyframes loadingAnimation{from{transform:rotate(0)}to{transform:rotate(360deg)}}.jimi-preview{box-sizing:border-box;position:fixed;height:100%;width:100%;top:0;left:0;overflow-y:auto;z-index:200;background-color:rgba(18,18,18,0.4)}.jimi-preview div{display:flex;justify-content:center;align-items:center;min-height:100%;width:100%}.jimi-preview div img{cursor:zoom-out;user-select:none}.jimi-question-time{font-size:13px !important;font-weight:normal !important;line-height:24px}.jimi-stop-scroll{height:100% !important;overflow:hidden !important}.jimi-export-collection-box{float:right;text-align:right}.jimi-export-collection-box p{font-size:13px;color:#666;margin:4px 0}.jimi-people-export-progress{display:inline-flex;align-items:center;gap:6px;margin-left:8px;color:#666;font-size:12px;vertical-align:middle}.jimi-people-export-progress-track{display:inline-block;width:90px;height:6px;overflow:hidden;border-radius:4px;background:#e5e5e5}.jimi-people-export-progress-bar{display:block;width:0;height:100%;transition:width .2s;background:#007aff}.jimi-pdf-dialog-item{padding:12px;border-bottom:1px solid #eee;margin:12px;background:#ffffff}.jimi-pdf-dialog-title{margin:0 0 1.4em;font-size:20px;font-weight:bold}.jimi-pdf-box-content{width:100%;background:#ffffff}.jimi-pdf-view{width:100%;background:#ffffff;word-break:break-all;white-space:pre-wrap;font-size:13px;overflow-x:hidden}.jimi-pdf-view a{color:#0066ff}.jimi-pdf-view img{max-width:100%}.jimi-pdf-view p{margin:1.4em 0}#JIMI_SUSPENSION_SWITCH{position:fixed;z-index:10;overflow:hidden;border-radius:6px}#JIMI_SUSPENSION_SWITCH>a{display:block;width:36px;height:36px;line-height:36px;text-align:center;background-color:rgba(255,255,255,0.8);color:#333;font-size:16px;cursor:pointer;border:1px solid #e0e0e0;border-top:none}#JIMI_SUSPENSION_SWITCH>a:first-of-type{border-top-left-radius:6px;border-top-right-radius:6px;border-top:1px solid #e0e0e0}#JIMI_SUSPENSION_SWITCH>a:last-of-type{border-bottom-left-radius:6px;border-bottom-right-radius:6px}#JIMI_SUSPENSION_SWITCH>a:hover{font-weight:bold;color:#fff;background:#005ce6}#JIMI_SUSPENSION_SWITCH:hover .lock-icon{display:block}#JIMI_SUSPENSION_SWITCH .lock-icon{font-size:18px;width:36px;height:36px;line-height:36px;text-align:center;display:none;cursor:pointer;z-index:2;position:relative;border-radius:50%}#JIMI_SUSPENSION_SWITCH .lock-icon:hover{background:rgba(0,0,0,0.4)}#JIMI_SUSPENSION_SWITCH .move-mock{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1;display:none;top:0;left:0;cursor:pointer}.key-shadow{border:1px solid #e0e0e0;border-radius:4px;box-shadow:rgba(0,0,0,0.06) 0 1px 1px 0;font-weight:600;min-width:26px;height:26px;padding:0px 6px;text-align:center;margin:0 4px}.jimi-video-link{border:1px solid #ccc;display:inline-block;height:98px;width:fit-content;border-radius:4px;box-sizing:border-box;overflow:hidden;transition:all .3s}.jimi-video-link img{width:98px;height:98px;vertical-align:bottom}.jimi-video-link span{padding:4px 12px;display:inline-block}.jimi-video-link:hover{border-color:#005ce6;color:#005ce6}#JIMI_MESSAGE_BOX{position:fixed;left:0;top:10px;width:100%;z-index:1000}.jimi-message{margin:0 auto;width:500px;height:48px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;box-shadow:0 0 8px #d0d4d6,0 0 8px #e6eaec;margin-bottom:12px;background:#fff}#IMPORT_BY_FILE,#IMPORT_BLACK{display:inline-flex}#IMPORT_BY_FILE input,#IMPORT_BLACK input{display:none}#JIMI_FILTER_BLOCK_WORDS input,#JIMI_FILTER_BLOCK_WORDS_CONTENT input{width:100%}#JIMI_COVER{position:fixed;top:0;left:-200%;width:100%;height:100%;pointer-events:none}`;
   var CLASS_PEOPLE_EXPORT_PROGRESS = "jimi-people-export-progress";
   var PROFILE_EXPORT_LIMIT = 20;
   var parseJSONAttr = (value) => {
@@ -2926,8 +2415,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       elementA.remove();
     });
   };
-  var changeVideoStyle = async () => {
-    const { videoInAnswerArticle } = await myStorage.getConfig();
+  var changeVideoStyle = () => {
+    const { videoInAnswerArticle } = IPHONE_PRESET.script;
     fnAppendStyle("JIMI_STYLE_VIDEO", STYLE_VIDEO[videoInAnswerArticle || "0" /* 默认 */]);
   };
   var STYLE_VIDEO = {
@@ -3389,17 +2878,16 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     const notInterestedSet = new Set(notInterestedList);
     const filterKeywordPatterns = createWordPatterns2(filterKeywords);
     const answerWordPatterns = createWordPatterns2(blockWordsAnswer);
-    const pfHistory = await myStorage.getHistory();
-    const historyList = pfHistory.list;
+    const historyList = pfConfig.saveHistory ? (await myStorage.getHistory()).list : [];
     const highlight = await doHighlightOriginal(backgroundHighlightOriginal, themeDark, themeLight);
     const codePrefix = Date.now();
     for (let i = 0, len = nodes.length; i < len; i++) {
       const nodeItem = nodes[i];
       if (nodeItem.classList.contains(JIMI_HIDDEN_ITEM_CLASS)) continue;
-      nodeItem.classList.add(CLASS_LISTENED);
-      nodeItem.dataset.code = `${codePrefix}-${i}`;
       const nodeContentItem = nodeItem.querySelector(".ContentItem");
       if (!nodeItem.scrollHeight || !nodeContentItem) continue;
+      nodeItem.classList.add(CLASS_LISTENED);
+      nodeItem.dataset.code = `${codePrefix}-${i}`;
       let message2 = "";
       let dataZop = {};
       let cardContent = {};
@@ -3702,94 +3190,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       this.init();
     }
   };
-  var createHTMLMySelect = (domMain) => {
-    dom("#JIMI_BASIC_SHOW_SELECT", domMain).innerHTML = SELECT_BASIS_SHOW.map(
-      ({ label, value }) => createHTMLFormItem({ label, value: `<div class="jimi-select" name="${value}"></div>` })
-    ).join("");
-    domA(".jimi-select", domMain).forEach((item) => {
-      const name = item.getAttribute("name") || "";
-      if (OPTIONS_MAP[name]) {
-        item.innerHTML = `<div class="jimi-select-input">${`<span class="jimi-select-value"></span><span class="jimi-select-icon">▾</span>`}</div><div class="jimi-option-box" data-name="mySelect" style="display: none">` + OPTIONS_MAP[name].map(({ value, label }) => `<div data-value="${value}" class="jimi-option-item">${label}</div>`).join("") + `</div>`;
-        const itemInput = item.querySelector(".jimi-select-input");
-        const itemValue = item.querySelector(".jimi-select-value");
-        const itemOptionBox = item.querySelector(".jimi-option-box");
-        const open = () => {
-          if (item.dataset.open === "true") {
-            itemOptionBox.style.display = "none";
-            item.dataset.open = "false";
-          } else {
-            itemOptionBox.style.display = "block";
-            item.dataset.open = "true";
-          }
-        };
-        itemInput.onclick = () => {
-          closeAllSelect();
-          open();
-        };
-        itemOptionBox.onclick = async function(ev) {
-          const target = ev.target;
-          if (!target.classList.contains("jimi-option-item")) return;
-          const value = target.dataset.value;
-          const label = target.textContent;
-          itemValue.textContent = label;
-          itemValue.dataset.value = value;
-          optionChoose(itemOptionBox, target);
-          open();
-          await myStorage.updateConfigItem(name, value);
-          switch (name) {
-            case "zoomImageType":
-              mySize.change();
-              initImagePreview();
-              break;
-            case "videoInAnswerArticle":
-              changeVideoStyle();
-              myListenList.restart();
-              myListenAnswer.restart();
-              break;
-            case "linkShopping":
-            case "zoomListVideoType":
-            case "zoomImageHeight":
-              mySize.change();
-              break;
-            case "homeContentOpen":
-              myListenUserHomeList.restart();
-              break;
-            default:
-              break;
-          }
-        };
-      }
-    });
-  };
-  var closeAllSelect = () => {
-    domA(".jimi-select").forEach((item) => {
-      item.dataset.open = "false";
-      item.querySelector(".jimi-option-box").style.display = "none";
-    });
-  };
-  var optionChoose = (itemOptionBox, chooseOne) => {
-    itemOptionBox.querySelectorAll(".jimi-option-item").forEach((item) => {
-      item.dataset.choose = "false";
-    });
-    chooseOne && (chooseOne.dataset.choose = "true");
-  };
-  var echoMySelect = async () => {
-    const config = await myStorage.getConfig();
-    domA(".jimi-select").forEach((item) => {
-      const name = item.getAttribute("name");
-      if (!name) return;
-      const domValue = item.querySelector(".jimi-select-value");
-      const options = OPTIONS_MAP[name];
-      if (!options) return;
-      const currentOption = options.find((i) => i.value === config[name]);
-      if (!currentOption) return;
-      domValue.dataset.value = currentOption.value;
-      domValue.textContent = currentOption.label;
-      const itemOptionBox = item.querySelector(".jimi-option-box");
-      const itemChoose = itemOptionBox.querySelector(`.jimi-option-item[data-value="${currentOption.value}"]`);
-      optionChoose(itemOptionBox, itemChoose);
-    });
-  };
+
   var Store = class _Store {
     constructor() {
       this.userInfo = void 0;
@@ -3986,17 +3387,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
     return data;
   }
-  var inputImportFile = (domInput, callBack) => {
-    domInput.onchange = (e) => {
-      const target = e.target;
-      const configFile = (target.files || [])[0];
-      if (!configFile) return;
-      const reader = new FileReader();
-      reader.readAsText(configFile);
-      reader.onload = callBack;
-      target.value = "";
-    };
-  };
+
   var JIMI_HIDDEN_ITEM_CLASS = "jimi-hidden-item";
   var fnHidden = (ev, msg) => {
     ev.style.display = "none";
@@ -4087,100 +3478,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     suspensionSwitchColumnSquare: true,
     suspensionSwitchRingFeeds: true
   };
-  var CONFIG_SIMPLE = {
-    hiddenAnswerRightFooter: true,
-    hiddenFixedActions: true,
-    hiddenLogo: true,
-    hiddenHeader: true,
-    hiddenHomePayAsk: true,
-    hiddenItemActions: true,
-    hiddenQuestionShare: true,
-    hiddenQuestionTag: true,
-    hiddenQuestionActions: true,
-    hiddenReward: true,
-    hiddenZhuanlanTag: true,
-    hiddenListImg: true,
-    hiddenReadMoreText: true,
-    hiddenAD: true,
-    hiddenAnswers: true,
-    hiddenZhuanlanActions: true,
-    hiddenZhuanlanTitleImage: true,
-    hiddenHotItemMetrics: true,
-    hiddenHotItemIndex: true,
-    hiddenHotItemLabel: true,
-    hiddenDetailAvatar: true,
-    hiddenDetailBadge: true,
-    hiddenDetailName: true,
-    hiddenDetailFollow: true,
-    hiddenQuestionSide: true,
-    hiddenQuestionFollowing: true,
-    hiddenQuestionAnswer: true,
-    hiddenQuestionInvite: true,
-    hiddenSearchBoxTopSearch: true,
-    hiddenSearchPageTopSearch: true,
-    hiddenSearchPageFooter: true,
-    hiddenListAnswerInPerson: true,
-    hidden618HongBao: true,
-    hiddenZhuanlanFollowButton: true,
-    hiddenZhuanlanAvatarWrapper: true,
-    hiddenZhuanlanAuthorInfoHead: true,
-    hiddenZhuanlanAuthorInfoDetail: true,
-    hiddenQuestionSpecial: true,
-    hiddenListVideoContent: true,
-    hiddenHomeCreatorEntrance: true,
-    hiddenHomeQuanzi: true,
-    hiddenHomeRecommendFollow: true,
-    hiddenHomeCategory: true,
-    hiddenHomeCategoryMore: true,
-    hiddenHomeFooter: true,
-    hiddenHomeHotSearch: true,
-    removeFromYanxuan: true,
-    removeUnrealAnswer: false,
-    removeFollowVoteAnswer: false,
-    removeFollowVoteArticle: false,
-    removeFollowFQuestion: false,
-    removeBlockUserContent: true,
-    removeItemAboutAD: false,
-    removeItemQuestionAsk: false,
-    removeLessVote: false,
-    lessVoteNumber: 100,
-    removeLessVoteDetail: false,
-    lessVoteNumberDetail: 100,
-    suspensionHomeTab: false,
-    suspensionHomeTabPo: "left: 20px; top: 100px;",
-    suspensionHomeTabFixed: true,
-    suspensionFind: false,
-    suspensionFindPo: "left: 10px; top: 380px;",
-    suspensionFindFixed: true,
-    suspensionSearch: true,
-    suspensionSearchPo: "left: 10px; top: 400px;",
-    suspensionSearchFixed: true,
-    suspensionUser: true,
-    suspensionUserPo: "right: 60px; top: 100px;",
-    suspensionUserFixed: true,
-    suspensionPickUp: true,
-    answerOpen: "off" /* 收起长回答 */,
-    showBlockUser: false,
-    zoomImageType: "2" /* 自定义尺寸 */,
-    zoomImageSize: "200",
-    questionTitleTag: true,
-    listTitleTagQuestion: true,
-    listTitleTagArticle: true,
-    listTitleTagVideo: true,
-    listTitleTagPin: true,
-    listOutPutNotInterested: true,
-    fixedListItemMore: true,
-    highlightOriginal: true,
-    highlightListItem: true,
-    listItemCreatedAndModifiedTime: true,
-    answerItemCreatedAndModifiedTime: true,
-    questionCreatedAndModifiedTime: true,
-    articleCreateTimeToTop: true,
-    linkShopping: "1" /* 仅文字 */,
-    hiddenAnswerItemActions: true,
-    hiddenAnswerItemTime: true,
-    commitModalSizeSameVersion: true
-  };
+
   var CONFIG_DEFAULT = {
     ...CONFIG_HIDDEN_DEFAULT,
     ...CONFIG_FILTER_DEFAULT,
@@ -4442,11 +3740,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
     return `${nowYear - year}年前`;
   };
-  var THEMES = [
-    { label: "浅色", value: 0 /* 浅色 */, background: "#fff", color: "#69696e" },
-    { label: "深色", value: 1 /* 深色 */, background: "#000", color: "#fff" },
-    { label: "自动", value: 2 /* 自动 */, background: "linear-gradient(to right, #fff, #000)", color: "#000" }
-  ];
+
   var THEME_CONFIG_LIGHT = {
     [0 /* 默认 */]: { name: "默认", background: "#ffffff", background2: "", primary: "rgb(0, 122, 255)" },
     [2 /* 黄 */]: { name: "黄", background: "#faf9de", background2: "#fdfdf2", primary: "rgb(160, 90, 0)" },
@@ -4467,20 +3761,20 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     [6 /* 高对比度绿 */]: { name: "高对比度绿", background: "#093333", background2: "#0c403f", primary: "#093333" },
     [7 /* 纯黑 */]: { name: "纯黑", background: "#202123", background2: "#000000", primary: "#121212" }
   };
-  var INPUT_NAME_THEME = "theme";
-  var INPUT_NAME_THEME_DARK = "themeDark";
-  var INPUT_NAME_ThEME_LIGHT = "themeLight";
-  var onUseThemeDark = async () => {
-    dom("html").setAttribute("data-theme", await isDark() ? "dark" : "light");
+
+  var onUseThemeDark = () => {
+    const html = document.documentElement;
+    const theme = isDark() ? "dark" : "light";
+    if (html.getAttribute("data-theme") !== theme) html.setAttribute("data-theme", theme);
   };
   var checkThemeDarkOrLight = () => {
     onUseThemeDark();
     const elementHTML = dom("html");
     const muConfig = { attributes: true, attributeFilter: ["data-theme"] };
     if (!elementHTML) return;
-    const muCallback = async function() {
+    const muCallback = function() {
       const themeName = elementHTML.getAttribute("data-theme");
-      const dark = await isDark();
+      const dark = isDark();
       if (themeName === "dark" && !dark || themeName === "light" && dark) {
         onUseThemeDark();
       }
@@ -4493,8 +3787,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       mySize.init();
     });
   };
-  var isDark = async () => {
-    const { theme = 2 /* 自动 */ } = await myStorage.getConfig();
+  var isDark = () => {
+    const { theme = 2 /* 自动 */ } = IPHONE_PRESET.script;
     if (+theme === 2 /* 自动 */) {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
@@ -4503,9 +3797,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var appendClassStart = (str) => appendPrefix(str, (i) => `[class|="${i}"]`);
   var appendPrefix = (str, mapCB) => str.split(",").map(mapCB).join(",");
   var myBackground = {
-    init: async function() {
-      const { themeDark = 1 /* 深色一 */, themeLight = 0 /* 默认 */, colorText1 } = await myStorage.getConfig();
-      const useDark = await isDark();
+    init: function() {
+      const { themeDark = 1 /* 深色一 */, themeLight = 0 /* 默认 */, colorText1 } = IPHONE_PRESET.script;
+      const useDark = isDark();
       const isRegular = !useDark && themeLight === 0 /* 默认 */;
       fnAppendStyle(
         "JIMI_STYLE_BACKGROUND",
@@ -4544,61 +3838,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   )}`;
   var DARK_NAME_COLOR_BLACK = `css-1x3upj1,.PlaceHolder-inner,.PlaceHolder-mask path`;
   var DARK_NAME_COLOR_LIGHT_LINK = `.jimi-zhida,.css-1esjagr,.css-ruirke,.css-117anjg a.UserLink-link,.RichContent--unescapable.is-collapsed .ContentItem-rightButton,.css-1qap1n7,.ContentItem-more,.ContentItem-title a:hover,.Profile-lightItem:hover,.Profile-lightItem:hover .Profile-lightItemValue,.css-p54aph:hover,.PushNotifications-item a:hover,.PushNotifications-item a,.NotificationList-Item-content .NotificationList-Item-link:hover,.SettingsQA a,a.QuestionMainAction:hover,.SimilarQuestions-item .Button,.CreatorSalt-IdentitySelect-Button,.signQr-leftContainer button:hover,.signQr-leftContainer a:hover,.Profile-sideColumnItemLink:hover,.FollowshipCard-link,.css-zzimsj:hover,.css-vphnkw,.css-1aqu4xd,.css-6m0nd1,.NumberBoard-item.Button:hover .NumberBoard-itemName, .NumberBoard-item.Button:hover .NumberBoard-itemValue, .NumberBoard-itema:hover .NumberBoard-itemName, .NumberBoard-itema:hover .NumberBoard-itemValue,a.external,.RichContent-EntityWord,.SideBarCollectionItem-title,.Tag-content,.LabelContainer div,.LabelContainer a,.KfeCollection-OrdinaryLabel-newStyle-mobile .KfeCollection-OrdinaryLabel-content,.KfeCollection-OrdinaryLabel-newStyle-pc .KfeCollection-OrdinaryLabel-content,.KfeCollection-CreateSaltCard-button,.KfeCollection-PcCollegeCard-searchMore,.css-15m2p8i > a:hover,#JIMI_SUSPENSION_SWITCH>a:hover`;
-  var createHTMLBackgroundSetting = (domMain) => {
-    const radioBackground = (name, value, background, color, label, primary) => `<label class="jimi-background-item">${`<input class="${CLASS_INPUT_CLICK}" name="${name}" type="radio" value="${value}"/><div class="jimi-background-item-div" style="background: ${primary || background};color: ${color}"></div><div class="jimi-background-item-border"></div><div class="jimi-background-item-name">${label}</div>`}</label>`;
-    const themeToRadio = (o, className, color) => Object.keys(o).map((key) => radioBackground(className, key, o[key].background, color, o[key].name, o[key].primary)).join("");
-    dom(".jimi-set-background", domMain).innerHTML = `<div class="jimi-form-box-item">${`<div>主题</div><div id="JIMI_BACKGROUND">${THEMES.map((i) => radioBackground(INPUT_NAME_THEME, i.value, i.background, i.color, i.label, i.background)).join("")}</div>`}</div><div class="jimi-form-box-item">${`<div>浅色主题</div><div id="JIMI_BACKGROUND_LIGHT">${themeToRadio(THEME_CONFIG_LIGHT, INPUT_NAME_ThEME_LIGHT, "#000")}</div>`}</div><div class="jimi-form-box-item">${`<div>深色主题</div><div id="JIMI_BACKGROUND_DARK">${themeToRadio(THEME_CONFIG_DARK, INPUT_NAME_THEME_DARK, "#f7f9f9")}</div>`}</div>`;
-  };
+
   var doHighlightOriginal = async (backgroundHighlightOriginal = "", themeDark, themeLight) => "background: " + (backgroundHighlightOriginal ? `${backgroundHighlightOriginal}!important;` : await isDark() ? `${THEME_CONFIG_DARK[themeDark].background2}!important;` : +themeLight === 0 /* 默认 */ ? "rgb(251,248,241)!important;" : `${THEME_CONFIG_LIGHT[themeLight].background}!important;`);
-  var BLOCK_WORDS_LIST = `#JIMI_FILTER_BLOCK_WORDS .jimi-block-words-content`;
-  var BLOCK_WORDS_ANSWER = `#JIMI_FILTER_BLOCK_WORDS_CONTENT .jimi-block-words-content`;
-  var NAME_BY_KEY = {
-    filterKeywords: BLOCK_WORDS_LIST,
-    blockWordsAnswer: BLOCK_WORDS_ANSWER
-  };
-  var onRemove = async (e, key) => {
-    const domItem = e.target;
-    if (!domItem.classList.contains("jimi-filter-word-remove")) return;
-    const title = domItem.innerText;
-    const config = await myStorage.getConfig();
-    domItem.remove();
-    myStorage.updateConfigItem(
-      key,
-      (config[key] || []).filter((i) => i !== title)
-    );
-  };
-  var onAddWord = async (target, key) => {
-    const word = target.value;
-    const configChoose = (await myStorage.getConfig())[key];
-    if (!Array.isArray(configChoose)) return;
-    if (configChoose.includes(word)) {
-      message("屏蔽词已存在");
-      return;
-    }
-    configChoose.push(word);
-    await myStorage.updateConfigItem(key, configChoose);
-    const domItem = domC("span", { innerText: word });
-    domItem.classList.add("jimi-filter-word-remove");
-    const nodeFilterWords = dom(NAME_BY_KEY[key]);
-    nodeFilterWords && nodeFilterWords.appendChild(domItem);
-    target.value = "";
-  };
-  var initBlockedWords = async () => {
-    const config = await myStorage.getConfig();
-    const arr = [
-      { domFind: dom(BLOCK_WORDS_LIST), name: "filterKeywords", domInput: dom('[name="inputBlockedWord"]') },
-      { domFind: dom(BLOCK_WORDS_ANSWER), name: "blockWordsAnswer", domInput: dom('[name="inputBlockedWordAnswer"]') }
-    ];
-    for (let i = 0, len = arr.length; i < len; i++) {
-      const { domFind, name, domInput } = arr[i];
-      if (domFind) {
-        const children = (config[name] || []).map((i2) => `<span class="jimi-filter-word-remove">${i2}</span>`).join("");
-        domFind.innerHTML = children || "";
-        domFind.onclick = (e) => onRemove(e, name);
-      }
-      domInput && (domInput.onchange = (e) => onAddWord(e.target, name));
-    }
-  };
+
   var myCtzTypeOperation = {
     init: function() {
       const params = new URLSearchParams(location.search);
@@ -5456,8 +4698,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       value: AnswerRightHidden
     }
   ];
-  var appendHiddenStyle = async () => {
-    const config = await myStorage.getConfig();
+  var appendHiddenStyle = () => {
+    const config = applyCodePreset();
     let hiddenContent = "";
     HIDDEN_ARRAY.forEach((item) => {
       item.content.forEach((content) => {
@@ -5476,11 +4718,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
     fnAppendStyle("JIMI_STYLE_HIDDEN", hiddenContent);
   };
-  var createHTMLHiddenConfig = (domMain) => {
-    dom("#JIMI_HIDDEN", domMain).innerHTML = HIDDEN_ARRAY.map(
-      (item, index2) => (item.name ? `<div class="jimi-title">${item.name}<span>${item.desc}</span></div>` : "") + createHTMLFormBoxSwitch(item.content)
-    ).join("");
-  };
+
   var callbackGIF = async (mutationsList) => {
     const target = mutationsList[0].target;
     const targetClassList = target.classList;
@@ -5928,9 +5166,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     qzone: "https://qzonestyle.gtimg.cn/aoi/img/logo/favicon.ico?max_age=31536000",
     baidu: "https://www.baidu.com/favicon.ico"
   };
-  var createHTMLTitleICOChange = (nDomMain) => {
-    dom("#JIMI_TITLE_ICO", nDomMain).innerHTML = Object.entries(ICO_URL).map(([key, value]) => `<label><input class="jimi-i" name="titleIco" type="radio" value="${key}" /><img src="${value}" alt="${key}"></label>`).join("");
-  };
+
   var REGEXP_MESSAGE = /^\([^()]+\)/;
   var changeTitle = async () => {
     const { globalTitle, globalTitleRemoveMessage } = await myStorage.getConfig();
@@ -5959,63 +5195,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       })
     );
   };
-  var buttonConfirmPageTitle = async () => {
-    const nodeTitle = dom('[name="globalTitle"]');
-    await myStorage.updateConfigItem("globalTitle", nodeTitle ? nodeTitle.value : "");
-    changeTitle();
-    message("网页标题修改成功");
-  };
-  var buttonResetPageTitle = async () => {
-    const domGlobalTitle = dom('[name="globalTitle"]');
-    domGlobalTitle && (domGlobalTitle.value = myCachePageTitle.get());
-    await myStorage.updateConfigItem("globalTitle", "");
-    changeTitle();
-    message("网页标题已还原");
-  };
-  var moveTimeout;
-  var onMove = (name, element) => {
-    element.onmousedown = async (ev) => {
-      if (element.querySelector(".lock-icon").dataset.lock === "true") {
-        return;
-      }
-      const event = window.event || ev;
-      const windowW = window.innerWidth;
-      const windowH = window.innerHeight;
-      const eW = element.offsetWidth;
-      const eH = element.offsetHeight;
-      const eL = element.offsetLeft;
-      const eT = element.offsetTop;
-      const evX = event.clientX;
-      const evY = event.clientY;
-      const dx = evX - eL;
-      const dy = evY - eT;
-      document.onmousemove = (ev2) => {
-        const eventN = window.event || ev2;
-        const evNX = eventN.clientX;
-        let evenLeft = 0;
-        const left = evNX - dx;
-        evenLeft = left <= 0 ? 0 : left >= windowW - eW ? windowW - eW : left;
-        element.style.left = evenLeft + "px";
-        const top = eventN.clientY - dy;
-        const evenTop = top <= 0 ? 0 : top >= windowH - eH ? windowH - eH : top;
-        element.style.top = evenTop + "px";
-        moveTimeout && clearTimeout(moveTimeout);
-        moveTimeout = setTimeout(async () => {
-          clearTimeout(moveTimeout);
-          await myStorage.updateConfigItem(`${name}Po`, `left: ${evenLeft}px; top: ${evenTop}px;`);
-        }, 500);
-      };
-      document.onmouseup = () => {
-        document.onmousemove = null;
-        document.onmouseup = null;
-      };
-      if (element.preventDefault) {
-        element.preventDefault();
-      } else {
-        return false;
-      }
-    };
-  };
+
   var suspensionPickupAttribute = async () => {
     const { suspensionPickUp } = await myStorage.getConfig();
     if (suspensionPickUp) {
@@ -6054,118 +5234,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
     }, 500);
   };
-  var initFetchInterceptStatus = async (domMain) => {
-    const { fetchInterceptStatus } = await myStorage.getConfig();
-    dom("#JIMI_FETCH_STATUS", domMain).innerHTML = fetchInterceptStatus ? '<b style="color: #00bfa5;">已开启接口拦截</b>，若页面无法显示数据请尝试关闭' : '<b style="color: #d50000;">已关闭接口拦截</b>，部分功能不可用';
-    if (!fetchInterceptStatus) {
-      domA(".jimi-fetch-intercept", domMain).forEach((item) => {
-        item.classList.add("jimi-fetch-intercept-close");
-        item.querySelectorAll("input").forEach((it) => {
-          it.disabled = true;
-        });
-        item.querySelectorAll("button").forEach((it) => {
-          it.disabled = true;
-        });
-      });
-    }
-  };
-  var BASIC_SHOW = [
-    [
-      { label: `列表 - 标题类别显示<b style="color: #ec7259">「问题」</b>`, value: "listTitleTagQuestion" },
-      { label: `列表 - 标题类别显示<b style="color: #00965e">「文章」</b>`, value: "listTitleTagArticle" },
-      { label: `列表 - 标题类别显示<b style="color: #12c2e9">「视频」</b>`, value: "listTitleTagVideo" },
-      { label: `列表 - 标题类别显示<b style="color: #9c27b0">「想法」</b>`, value: "listTitleTagPin" },
-      { label: "列表和回答 - 点击高亮边框", value: "highlightListItem" },
-      { label: "列表 - 「···」按钮移动到最右侧", value: "fixedListItemMore" },
-      { label: "列表 - 显示「直达问题」按钮", value: "listOutputToQuestion" }
-    ],
-    [
-      { label: "操作栏仅显示数字和图标", value: "justNumberInAction" }
-    ],
-    [
-      { label: "问题详情 - 替换回答顶部赞同数显示（实时显示点赞数量）", value: "topVote" },
-      { label: "问题详情 - 一键获取回答链接", value: "copyAnswerLink" },
-      { label: "回答和文章顶部显示「导出当前内容/回答按钮」", value: "topExportContent" }
-    ],
-    [
-      { label: "用户主页 - 内容发布和修改时间", value: "userHomeContentTimeTop" },
-      { label: "列表 - 发布和修改时间", value: "listItemCreatedAndModifiedTime" },
-      { label: "问题详情 - 问题 - 发布和修改时间", value: "questionCreatedAndModifiedTime" },
-      { label: "问题详情 - 回答 - 发布和修改时间", value: "answerItemCreatedAndModifiedTime" },
-      { label: "文章 - 发布时间", value: "articleCreateTimeToTop" }
-    ],
-    [
-      { label: "取消评论输入框自动聚焦", value: "cancelCommentAutoFocus" },
-      { label: "键盘ESC键关闭评论弹窗", value: "keyEscCloseCommentDialog" },
-      { label: "点击空白处关闭评论弹窗", value: "clickMarkCloseCommentDialog" }
-    ]
-  ];
-  var DEFAULT_FUNCTION = [
-    {
-      title: "外部链接直接跳转",
-      commit: "知乎里所有外部链接的重定向页面去除，点击将直接跳转到外部链接，不再打开知乎外部链接提示页面"
-    },
-    {
-      title: "移除登录提示弹窗"
-    },
-    {
-      title: "一键移除所有屏蔽话题，点击「话题黑名单」编辑按钮出现按钮",
-      commit: '知乎<a href="https://www.zhihu.com/settings/filter" target="_blank">屏蔽页面</a>每次只显示部分内容，建议解除屏蔽后刷新页面查看是否仍然存在新的屏蔽标签'
-    },
-    {
-      title: "视频下载",
-      commit: "可下载视频内容左上角将会生成一个下载按钮，点击即可下载视频"
-    },
-    {
-      title: "收藏夹内容导出为 PDF（需开启接口拦截）",
-      commit: "点击收藏夹名称上方「导出当前页内容」按钮，可导出当前页码的收藏夹详细内容"
-    },
-    {
-      title: "个人主页关注订阅快捷取消关注",
-      commit: "由于知乎接口的限制，关注及移除只能在对应页面中进行操作，所以点击「移除关注」按钮将打开页面到对应页面，取消或关注后此页面自动关闭，如果脚本未加载请刷新页面<br>目前仅支持「我关注的问题」、「我关注的收藏」一键移除或添回关注"
-    },
-    {
-      title: "预览静态图片键盘快捷切换",
-      commit: "静态图片点击查看大图时，如果当前回答或者文章中存在多个图片，可以使用键盘方向键左右切换图片显示"
-    },
-    {
-      title: "用户主页-回答-导出当前页回答的功能（需开启接口拦截）"
-    },
-    {
-      title: "用户主页-文章-导出当前页文章的功能（需开启接口拦截）"
-    },
-    {
-      title: "一键邀请",
-      commit: "问题邀请用户添加一键邀请按钮，点击可邀请所有推荐用户"
-    },
-    {
-      title: "解除禁止转载的限制",
-      commit: "无视禁止转载提示强行复制"
-    }
-  ];
-  var FILTER_LIST = [
-    [{ label: "屏蔽顶部活动推广", value: "removeTopAD" }],
-    [{ label: "屏蔽匿名用户提出的问题", value: "removeAnonymousQuestion", needFetch: true }],
-    [
-      { label: "关注列表屏蔽自己的操作", value: "removeMyOperateAtFollow" },
-      { label: "关注列表过滤关注人赞同回答", value: "removeFollowVoteAnswer" },
-      { label: "关注列表过滤关注人赞同文章", value: "removeFollowVoteArticle" },
-      { label: "关注列表过滤关注人关注问题", value: "removeFollowFQuestion" }
-    ],
-    [
-      { label: "列表过滤邀请回答", value: "removeItemQuestionAsk" },
-      { label: "列表过滤商业推广", value: "removeItemAboutAD" },
-      { label: "列表过滤文章", value: "removeItemAboutArticle" },
-      { label: "列表过滤视频", value: "removeItemAboutVideo" },
-      { label: "列表过滤想法", value: "removeItemAboutPin" }
-    ]
-  ];
-  var HIGH_PERFORMANCE = [
-    [
-      { label: "推荐列表高性能模式", value: "highPerformanceRecommend", tooltip: "推荐列表内容最多保留50条，超出则删除之前内容" },
-      { label: "回答页高性能模式", value: "highPerformanceAnswer", tooltip: "回答列表最多保留30条回答，超出则删除之前回答" }
-    ]
-  ];
+
   var initHTML = () => {
     document.body.appendChild(domC("div", { id: "JIMI_MAIN", innerHTML: INNER_HTML }));
   };
@@ -6203,7 +5272,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       scheduleFast();
       scheduleHeavy();
     }, FAST_TRIGGER_DELAY);
-    const resizeObserver = new ResizeObserver(() => onResize());
+    const resizeObserver = new ResizeObserver(() => {
+      // 手机卡片在本次布局后立即完成过滤与排版，不再等待 120ms 防抖。
+      if (isIPhoneLayout) { scheduleFast(); scheduleHeavy(); }
+      else onResize();
+    });
     resizeObserver.observe(document.body);
     scheduleFast();
     scheduleHeavy();
@@ -6334,20 +5407,24 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     async function onDocumentStart() {
       if (!HTML_HOOTS.includes(hostname) || window.frameElement) return;
       if (!document.head) {
-        setTimeout(onDocumentStart, 100);
+        const observer = new MutationObserver(() => {
+          if (document.head) { observer.disconnect(); onDocumentStart(); }
+        });
+        observer.observe(document, { childList: true, subtree: true });
         return;
       }
+      checkThemeDarkOrLight();
       initIPhoneLayout();
       fixVideoAutoPlay();
       fnAppendStyle("JIMI_STYLE", INNER_CSS);
-      const config = await myStorage.getConfig();
-      if (config.saveHistory) initHistoryView();
+      // 所有视觉预设先同步就位；随后才读取持久化的屏蔽/反馈数据。
       appendHiddenStyle();
       myBackground.init();
       mySize.init();
-      checkThemeDarkOrLight();
       changeVideoStyle();
       dom("html").classList.add(/www\.zhihu\.com\/column/.test(href) ? "zhuanlan" : EXTRA_CLASS_HTML[hostname]);
+      const config = await myStorage.getConfig();
+      if (config.saveHistory) initHistoryView();
       const { fetchInterceptStatus } = config;
       if (fetchInterceptStatus || isIPhoneBatchPage()) {
         fnLog("已开启接口拦截");
@@ -6471,6 +5548,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       if (location.hash !== prevHash && prevPathname === location.pathname) return;
       prevHash = location.hash;
       prevPathname = location.pathname;
+      syncIPhonePageRoute();
       historyToChangePathname();
       myListenList.reset();
       myListenSearchListItem.reset();
@@ -6522,11 +5600,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     window.addEventListener("copy", function(event) {
       eventCopy(event);
     });
-    document.addEventListener("click", function(event) {
-      const target = event.target;
-      if (!target.classList.contains("jimi-select") && !domP(target, "class", "jimi-select")) {
-        closeAllSelect();
-      }
-    });
+
   })();
 })();
