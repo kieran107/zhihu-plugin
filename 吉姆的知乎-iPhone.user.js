@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.19
+// @version      1.20
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -546,6 +546,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
         box-shadow: inset 0 -1px 0 var(--jimi-grid-line);
         --jimi-grid-size: calc(100vw / 20);
+        bottom: mod(calc(100% - 96px), var(--jimi-grid-size));
         background:
           var(--jimi-canvas-top) center top / 100% 96px no-repeat,
           linear-gradient(to right, var(--jimi-grid-line) .75px, transparent .75px) 0 96px / var(--jimi-grid-size) var(--jimi-grid-size),
@@ -659,10 +660,10 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         background: var(--jimi-slot-bg); box-shadow: var(--jimi-slot-shadow);
         scroll-margin-top: max(12px, env(safe-area-inset-top)); pointer-events: none;
       }
-      /* 外壳属于当前正文，原生按钮仍留在 React 的原位置；sticky 在正文边界内自然归位。 */
+      /* 外壳属于当前正文，上界留出两行；原生按钮仍在 React 原位置，sticky 到文末自然归位。 */
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-host {
         position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3;
-        height: 60px; margin: 22px 0 0; padding: 0; overflow: visible;
+        height: 60px; margin: ${Number(IPHONE_PRESET.script.contentLineHeight) * 2}px 0 0; padding: 0; overflow: visible;
       }
       html.jim-iphone :is(.ContentItem-actions, .RichContent-actions) {
         box-sizing: border-box; max-width: 100%; width: auto !important;
@@ -683,7 +684,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         background: var(--jimi-bar-bg) !important; box-shadow: var(--jimi-bar-shadow) !important;
       }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) > .ContentItem-actions.jimi-action-host {
-        position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; margin-top: 22px !important;
+        position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; margin-top: ${Number(IPHONE_PRESET.script.contentLineHeight) * 2}px !important;
       }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed):not(:has(button[data-zop-retract-question="true"])) .ContentItem-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-actions > :is(.jimi-answer-author, .jimi-iphone-collapse, :has(.VoteButton), :has(.Zi--Comment, .ZDI--ChatBubbleFill24)) {
