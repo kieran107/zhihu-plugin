@@ -31,3 +31,14 @@
 [Tampermonkey](https://www.tampermonkey.net/) 是运行脚本的扩展，GitHub 与 Greasy Fork 是分发平台，均不代表对本项目的背书。本项目没有加入远程 `@require` 依赖。
 
 知乎平台、商标及用户发表的文章、图片和评论不属于本项目的代码许可范围。本项目与知乎及原作者均无官方合作或代理关系。
+
+
+## 视觉参考：Claude / Anthropic 暖纸配色
+
+核对日期：2026-09-30。
+
+- [Anthropic 官方品牌规范](https://github.com/anthropics/skills/blob/main/skills/brand-guidelines/SKILL.md)：暖白 `#faf9f5`、暖灰 `#e8e6dc`、深色 `#141413`、陶土 `#d97757` 等基础色。
+- [Claude Light Theme](https://github.com/AuroralFrost/claude-light-theme)：社区制作的编辑器主题，参考其暖纸、深棕灰文字与蓝色状态的搭配思路；它不是 Anthropic 官方主题规范。
+- [Claude Code 终端主题说明](https://code.claude.com/docs/en/terminal-config)：终端主题与终端自身配色相互独立，不能视作完整的网页 UI 配色表。
+
+本项目仅参考色彩方向，自行调整阅读对比度、纸面层次和组件状态；不引入外部主题代码、字体、品牌标志或依赖，不声称官方合作。

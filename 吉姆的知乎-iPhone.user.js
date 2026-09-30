@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.29
+// @version      1.30
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -71,7 +71,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     "script": {
       "fetchInterceptStatus": true,
       "theme": "2",
-      "themeLight": "4",
+      "themeLight": "8",
       "themeDark": "1",
       "fontSizeForList": "17",
       "fontSizeForAnswer": "19",
@@ -398,7 +398,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         colors.push(meta);
       }
       const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--jimi-page-bg").trim() ||
-        (document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#ffffff");
+        (document.documentElement.getAttribute("data-theme") === "dark" ? "#191919" : "#faf9f5");
       for (const meta of colors) if (meta.content !== themeColor) meta.content = themeColor;
     };
     // 只响应相关 meta，避免知乎每次插入样式都强制读取布局。
@@ -527,25 +527,35 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       /* 紧凑列表只改变预览；展开后仍使用知乎原生回答与操作。 */
       html.jim-iphone {
         color-scheme: light;
-        --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-answer-text: #202124;
-        --jimi-liked: #06f;
+        --jimi-feed-bg: #faf9f5; --jimi-feed-text: #26231f; --jimi-feed-muted: #706b61; --jimi-feed-line: #dedbd1; --jimi-pill-bg: #efede4; --jimi-answer-text: #26231f;
+        --jimi-liked: #326b9b; --jimi-focus: #b75c3b;
+        --jimi-avatar-gap: #faf9f5; --jimi-avatar-ring: #433d32; --jimi-preview-bg: #29251ff0;
         --jimi-like-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M7%2010H3v11h4m0-11%204-8h2v6h5a3%203%200%200%201%203%203l-1%207a3%203%200%200%201-3%203H7V10Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-grid-line: #8b94a059; --jimi-imprint-ink: #92969c;
-        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 6px #18243824, 0 0 20px #18243833; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
-        --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
-        --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f0eee6; --jimi-grid-line: #9c8e7959; --jimi-imprint-ink: #8a7f70;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f0eee6%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%239c8e79%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-bar-bg: #f4f1e8; --jimi-bar-border: #51402b14; --jimi-bar-shadow: 0 0 6px #51402b24, 0 0 20px #51402b33; --jimi-slot-bg: #e8e3d7; --jimi-slot-shadow: inset 0 8px 10px -3px #51402b2e, inset 0 -7px 10px -3px #faf9f5;
+        --jimi-card-shadow: 0 1px 2px #51402b0d, 0 7px 18px -5px #51402b26, inset 0 0 0 1px #51402b0a;
+        --jimi-card-focus-shadow: 0 4px 10px #51402b10, 0 16px 32px -8px #51402b38, inset 0 0 0 1px #51402b12;
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-answer-text: #d0d2d6;
-        --jimi-liked: #6aa6ff;
+        --jimi-liked: #6aa6ff; --jimi-focus: #06f;
+        --jimi-avatar-gap: #fff; --jimi-avatar-ring: #161616; --jimi-preview-bg: rgba(0, 0, 0, .94);
         --jimi-feed-canvas: #101113; --jimi-grid-line: #aab4c53d; --jimi-imprint-ink: #737880;
         --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 8px #0009, 0 0 22px #000b; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
+      /* 暖纸配色来源见 THIRD_PARTY_NOTICES.md；补齐原生正文和弹层的冷白／冷灰色。 */
+      html.jim-iphone[data-theme="light"] :is(body, .ContentItem-title, .QuestionHeader-title, .Post-Title, .RichText) { color: var(--jimi-feed-text) !important; }
+      html.jim-iphone[data-theme="light"] :is(.ContentItem-time, .ContentItem-time a, .Voters, .Voters button) { color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme="light"] .RichText :is(blockquote, hr, table, th, td) { border-color: var(--jimi-feed-line) !important; }
+      html.jim-iphone[data-theme="light"] .RichText :is(blockquote, pre, code) { background-color: var(--jimi-pill-bg) !important; color: var(--jimi-feed-text) !important; }
+      html.jim-iphone[data-theme="light"] :is(.PlaceHolder-inner, .PlaceHolder-bg, .skeleton) { background: var(--jimi-pill-bg) !important; }
+      html.jim-iphone[data-theme="light"] :is(.Modal-backdrop, .css-zbtg51 > .css-5ym188) { background: #3b3329a6 !important; }
+      html.jim-iphone[data-theme="light"] ::selection { background: #d9775733; color: var(--jimi-feed-text); }
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
       /* Safari 顶栏需要可取色的实色 fixed 元素；12px 高于其细边框过滤阈值，伪元素底板仍负责完整纹理。 */
       html.jim-iphone #JIMI_SAFARI_TINT {
@@ -651,7 +661,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         background: transparent !important; color: var(--jimi-feed-text); text-align: left;
         font: inherit; cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
       }
-      html.jimi-compact-feed .jimi-feed-preview:focus-visible { outline: 2px solid #06f; outline-offset: 5px; border-radius: 4px; }
+      html.jimi-compact-feed .jimi-feed-preview:focus-visible { outline: 2px solid var(--jimi-focus); outline-offset: 5px; border-radius: 4px; }
       html.jimi-compact-feed .jimi-feed-preview:active { opacity: .65; }
       html.jimi-compact-feed .jimi-feed-title {
         display: block; font-size: ${IPHONE_PRESET.script.fontSizeForListTitle}px; font-weight: 600;
@@ -763,11 +773,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .AnswerItem .ContentItem-actions > .jimi-answer-author {
         grid-column: 1; display: flex; align-items: center; justify-content: center; text-decoration: none;
       }
-      html.jim-iphone .jimi-answer-author img { width: 34px !important; height: 34px !important; flex: 0 0 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #161616; }
+      html.jim-iphone .jimi-answer-author img { width: 34px !important; height: 34px !important; flex: 0 0 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--jimi-avatar-gap), 0 0 0 3px var(--jimi-avatar-ring); }
       html.jim-iphone .jimi-answer-author img[hidden] { display: none; }
       html.jim-iphone .jimi-answer-author span { display: none; }
       html.jim-iphone .jimi-answer-author:has(img[hidden])::before { content: "人"; font-size: 20px; color: var(--jimi-feed-muted); }
-      html.jim-iphone .ContentItem-actions :is(button, a):focus-visible { outline: 2px solid #0066ff; outline-offset: -2px; }
+      html.jim-iphone .ContentItem-actions :is(button, a):focus-visible { outline: 2px solid var(--jimi-focus); outline-offset: -2px; }
       html.jim-iphone .ContentItem-actions :is(button, a):active { opacity: .65; }
       html.jim-iphone :is(.ContentItem-actions button, .TopstoryTabs a, .AppHeader button,
         .Modal-closeButton, .jimi-button) { min-height: 44px; touch-action: manipulation; }
@@ -883,7 +893,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
       html.jimi-readonly-comments .css-1aq8hf9 :is(.css-18ld3w0, .css-16zdamy) { padding-bottom: 64px !important; }
       html.jim-iphone .jimi-message { max-width: calc(100vw - 24px); height: auto; min-height: 44px; padding: 8px; box-sizing: border-box; }
-      html.jim-iphone #JIMI_PREVIEW_IMAGE { background: rgba(0, 0, 0, .94); }
+      html.jim-iphone #JIMI_PREVIEW_IMAGE { background: var(--jimi-preview-bg); }
       html.jim-iphone .jimi-preview img { width: auto; height: auto; max-width: 100%; max-height: 90vh; max-height: 90dvh; object-fit: contain; }
       html.jim-iphone .jimi-preview video { max-width: 100%; max-height: 90vh; }
       html.jim-iphone .Post-content :is(.css-kjzwqj, .css-c0fani, .css-yq5nsh) {
@@ -4026,6 +4036,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   };
 
   var THEME_CONFIG_LIGHT = {
+    [8 /* 暖纸 */]: { name: "暖纸", background: "#f0eee6", background2: "#faf9f5", primary: "#b75c3b" },
     [0 /* 默认 */]: { name: "默认", background: "#ffffff", background2: "", primary: "rgb(0, 122, 255)" },
     [2 /* 黄 */]: { name: "黄", background: "#faf9de", background2: "#fdfdf2", primary: "rgb(160, 90, 0)" },
     [3 /* 绿 */]: { name: "绿", background: "#cce8cf", background2: "#e5f1e7", primary: "rgb(0, 125, 27)" },
