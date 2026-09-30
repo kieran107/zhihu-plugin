@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.13
+// @version      1.14
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -522,7 +522,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: light;
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
-        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20800%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M200%2024C150%2080%200%20165%200%20230V570C0%20635%20150%20720%20200%20776M200%2024C162.5%2080%2050%20165%2050%20230V570C50%20635%20162.5%20720%20200%20776M200%2024C175%2080%20100%20165%20100%20230V570C100%20635%20175%20720%20200%20776M200%2024C187.5%2080%20150%20165%20150%20230V570C150%20635%20187.5%20720%20200%20776M200%2024C200%2080%20200%20165%20200%20230V570C200%20635%20200%20720%20200%20776M200%2024C212.5%2080%20250%20165%20250%20230V570C250%20635%20212.5%20720%20200%20776M200%2024C225%2080%20300%20165%20300%20230V570C300%20635%20225%20720%20200%20776M200%2024C237.5%2080%20350%20165%20350%20230V570C350%20635%20237.5%20720%20200%20776M200%2024C250%2080%20400%20165%20400%20230V570C400%20635%20250%20720%20200%20776M164.7%2056.8H235.3M164.7%20743.2H235.3M121.5%2091.4H278.5M121.5%20708.6H278.5M68.3%20134.6H331.7M68.3%20665.4H331.7M16.0%20189.0H384.0M16.0%20611.0H384.0M0%20230H400M0%20310H400M0%20400H400M0%20490H400M0%20570H400%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.85%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-grid-line: #8b94a059;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M133.33%2032H266.67M66.67%2064H333.33M0.00%2096H400.00%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23f2f3f5%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M133.33%2032H266.67M66.67%2016H333.33M0.00%200H400.00%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.35%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 6px #18243824, 0 0 20px #18243833; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
         --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
@@ -531,23 +533,30 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         color-scheme: dark;
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
-        --jimi-feed-canvas: #101113; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20800%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20d%3D%22M200%2024C150%2080%200%20165%200%20230V570C0%20635%20150%20720%20200%20776M200%2024C162.5%2080%2050%20165%2050%20230V570C50%20635%20162.5%20720%20200%20776M200%2024C175%2080%20100%20165%20100%20230V570C100%20635%20175%20720%20200%20776M200%2024C187.5%2080%20150%20165%20150%20230V570C150%20635%20187.5%20720%20200%20776M200%2024C200%2080%20200%20165%20200%20230V570C200%20635%20200%20720%20200%20776M200%2024C212.5%2080%20250%20165%20250%20230V570C250%20635%20212.5%20720%20200%20776M200%2024C225%2080%20300%20165%20300%20230V570C300%20635%20225%20720%20200%20776M200%2024C237.5%2080%20350%20165%20350%20230V570C350%20635%20237.5%20720%20200%20776M200%2024C250%2080%20400%20165%20400%20230V570C400%20635%20250%20720%20200%20776M164.7%2056.8H235.3M164.7%20743.2H235.3M121.5%2091.4H278.5M121.5%20708.6H278.5M68.3%20134.6H331.7M68.3%20665.4H331.7M16.0%20189.0H384.0M16.0%20611.0H384.0M0%20230H400M0%20310H400M0%20400H400M0%20490H400M0%20570H400%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.85%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-feed-canvas: #101113; --jimi-grid-line: #aab4c53d;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M133.33%2032H266.67M66.67%2064H333.33M0.00%2096H400.00%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-canvas-bottom: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23101113%22%20d%3D%22M0%200H400V48H0z%22%2F%3E%3Cpath%20d%3D%22M200%2048L0%200M200%2048L20%200M200%2048L40%200M200%2048L60%200M200%2048L80%200M200%2048L100%200M200%2048L120%200M200%2048L140%200M200%2048L160%200M200%2048L180%200M200%2048L200%200M200%2048L220%200M200%2048L240%200M200%2048L260%200M200%2048L280%200M200%2048L300%200M200%2048L320%200M200%2048L340%200M200%2048L360%200M200%2048L380%200M200%2048L400%200M133.33%2032H266.67M66.67%2016H333.33M0.00%200H400.00%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
         --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 8px #0009, 0 0 22px #000b; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
       html.jim-iphone.jimi-compact-feed .Topstory { position: relative; isolation: isolate; }
-      /* 整屏网格上下收束，中段舒展；固定在卡片下方，不监听滚动或拦截触摸。 */
+      /* 20 列方格与上下扁金字塔逐列对齐；端部高度不超过对应留白的一半。 */
       html.jim-iphone.jimi-compact-feed .Topstory::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-        background: var(--jimi-canvas-pattern) center / 100% 100% no-repeat var(--jimi-page-bg);
+        --jimi-grid-size: calc(100vw / 20);
+        background:
+          var(--jimi-canvas-top) center top / 100% 96px no-repeat,
+          var(--jimi-canvas-bottom) center bottom / 100% 48px no-repeat,
+          linear-gradient(to right, var(--jimi-grid-line) .75px, transparent .75px) 0 96px / var(--jimi-grid-size) var(--jimi-grid-size),
+          linear-gradient(to bottom, var(--jimi-grid-line) .75px, transparent .75px) 0 96px / var(--jimi-grid-size) var(--jimi-grid-size) var(--jimi-page-bg);
       }
       html.jim-iphone.jimi-compact-feed .Topstory :is(.Topstory-container, .Topstory-mainColumn,
         .Topstory-mainColumnCard, .Topstory-content, .Topstory-recommend, .Topstory-follow, #TopstoryContent,
         .ListShortcut, .jimi-feed-intro, .jimi-feed-outro) { background: transparent !important; }
       @media (prefers-reduced-motion: reduce) {
-        html.jim-iphone.jimi-compact-feed .Topstory::before { position: absolute; background-position: center top; background-size: 100% 100vh; background-size: 100% 100svh; background-repeat: repeat-y; }
+        html.jim-iphone.jimi-compact-feed .Topstory::before { position: absolute; }
       }
       html.jim-iphone.jimi-compact-feed .Topstory-container { margin-top: 0 !important; padding-top: 12px !important; }
       html.jim-iphone.jimi-compact-feed .Topstory-container:has(.Topstory-recommend) { padding-top: 0 !important; }
