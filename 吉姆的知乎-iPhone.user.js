@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.17
+// @version      1.18
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -567,7 +567,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         display: flex; align-items: center; justify-content: center; color: var(--jimi-imprint-ink);
       }
       html.jimi-compact-feed .jimi-feed-imprint { top: 96px; height: 144px; flex-direction: column; gap: 6px; }
-      html.jimi-compact-feed .jimi-feed-refresh-hint { top: 58px; gap: 6px; margin: 0; font-size: 14px; line-height: 24px; }
+      html.jimi-compact-feed .jimi-feed-refresh-hint { top: 42px; flex-direction: column; gap: 2px; margin: 0; font-size: 14px; line-height: 22px; }
       html.jimi-compact-feed .jimi-feed-refresh-hint span { font-size: 20px; }
       html.jimi-compact-feed .jimi-feed-brand { margin: 0; color: inherit; font-size: 42px; line-height: 1.25; font-weight: 650; letter-spacing: 1px; }
       html.jimi-compact-feed .jimi-feed-tagline { margin: 0; font-size: 18px; line-height: 26px; letter-spacing: 2px; }
