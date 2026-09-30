@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.10
+// @version      1.11
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -517,7 +517,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-feed-bg: #fff; --jimi-feed-text: #202124; --jimi-feed-muted: #70757d; --jimi-feed-line: #e8eaed; --jimi-pill-bg: #f5f6f8; --jimi-collapse-border: #5f6368; --jimi-answer-text: #202124;
         --jimi-comment-liked: #b95763;
         --jimi-page-bg: var(--jimi-feed-bg); --jimi-feed-canvas: #f2f3f5; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%238b94a0%22%20stroke-opacity%3D%22.28%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 8px #1824381a, 0 5px 16px #18243833, 0 12px 28px -8px #1824383d, inset 0 1px 0 #fff; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
+        --jimi-bar-bg: #f8f9fa; --jimi-bar-border: #25334814; --jimi-bar-shadow: 0 0 6px #18243824, 0 0 20px #18243833; --jimi-slot-bg: #eef0f3; --jimi-slot-shadow: inset 0 8px 10px -3px #1824382e, inset 0 -7px 10px -3px #fff;
         --jimi-card-shadow: 0 1px 2px #1824380d, 0 7px 18px -5px #18243826, inset 0 0 0 1px #2533480a;
         --jimi-card-focus-shadow: 0 4px 10px #18243810, 0 16px 32px -8px #18243838, inset 0 0 0 1px #25334812;
       }
@@ -526,7 +526,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         --jimi-feed-bg: #191919; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-collapse-border: #fff; --jimi-answer-text: #d0d2d6;
         --jimi-comment-liked: #e79aa4;
         --jimi-feed-canvas: #101113; --jimi-canvas-pattern: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22320%22%3E%3Cdefs%3E%3Cpattern%20id%3D%22w%22%20width%3D%2264%22%20height%3D%2216%22%20patternUnits%3D%22userSpaceOnUse%22%20patternTransform%3D%22rotate%28-36.86989765%29%22%3E%3Cpath%20d%3D%22M-16%208Q0%200%2016%208T48%208T80%208%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.19%22%20stroke-width%3D%22.9%22%2F%3E%3C%2Fpattern%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url%28%23w%29%22%20d%3D%22M0%200h320v320H0z%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 10px #0006, 0 5px 18px #0009, 0 12px 28px -8px #000c, inset 0 1px 0 #ffffff12; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
+        --jimi-bar-bg: #292a2c; --jimi-bar-border: #ffffff14; --jimi-bar-shadow: 0 0 8px #0009, 0 0 22px #000b; --jimi-slot-bg: #141517; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
@@ -634,12 +634,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .RichContent:not(.is-collapsed):has(> .jimi-action-dock) { position: relative; padding-bottom: 2px; }
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-dock {
         display: block; position: absolute; bottom: 0; left: -2px; right: -2px; height: 64px; border-radius: 20px;
-        scroll-margin-top: max(12px, env(safe-area-inset-top)); pointer-events: none;
-      }
-      /* 宽而柔和的坡面围住平槽底，不描硬边；归位尺寸仍由原槽位决定。 */
-      html.jim-iphone .jimi-action-dock::before {
-        content: ""; position: absolute; inset: -7px; border-radius: 27px;
         background: var(--jimi-slot-bg); box-shadow: var(--jimi-slot-shadow);
+        scroll-margin-top: max(12px, env(safe-area-inset-top)); pointer-events: none;
       }
       /* 外壳属于当前正文，原生按钮仍留在 React 的原位置；sticky 在正文边界内自然归位。 */
       html.jim-iphone .RichContent:not(.is-collapsed) > .jimi-action-host {
