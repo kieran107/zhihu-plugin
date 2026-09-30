@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.21
+// @version      1.22
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -367,7 +367,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!isIPhoneLayout) return;
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
     window.addEventListener("click", trackIPhoneCommentAnswer, true);
-    window.addEventListener("resize", () => syncIPhoneAutoCollapse(true), { passive: true });
+    window.addEventListener("click", trackIPhoneAnswerMotion, true);
+    // 新触摸或视口改变时让出动画层，阅读与原生滚动优先。
+    window.addEventListener("touchstart", () => iPhoneAnswerMotion?.cancel(), { passive: true });
+    window.addEventListener("resize", () => {
+      iPhoneAnswerMotion?.cancel();
+      syncIPhoneAutoCollapse(true);
+    }, { passive: true });
     document.documentElement.classList.add("jim-iphone");
     syncIPhonePageRoute();
     document.documentElement.classList.toggle("jimi-compact-feed", IPHONE_PRESET.mobile.compactFeed);
@@ -604,6 +610,22 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       /* 用前后卡片位移拉开视觉间距，不逐帧改变长回答高度或外边距。 */
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-12px); }
       html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(12px); }
+      /* 动画只作用于视口内的独立底框、裁切和透明度，不插值正文布局高度。 */
+      .jimi-answer-surface {
+        position: fixed; pointer-events: none; z-index: 1000; border-radius: 18px;
+        background: var(--jimi-feed-bg); box-shadow: var(--jimi-card-shadow);
+        contain: layout style; margin: 0; padding: 0;
+      }
+      .jimi-answer-surface::after {
+        content: ""; position: absolute; inset: 0; border-radius: inherit;
+        box-shadow: var(--jimi-card-focus-shadow); opacity: var(--jimi-surface-shadow, 0);
+      }
+      html.jim-iphone.jimi-answer-changing .TopstoryItem.jimi-answer-morph {
+        z-index: 1001; background: transparent !important; box-shadow: none !important;
+      }
+      html.jim-iphone .TopstoryItem.jimi-answer-morph::after { opacity: 0 !important; }
+      html.jim-iphone.jimi-answer-changing .TopstoryItem:has(.AnswerItem),
+      html.jim-iphone.jimi-answer-changing .TopstoryItem:has(.AnswerItem)::after { transition: none; }
       @media (prefers-reduced-motion: reduce) {
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem),
         html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after { transition: none; }
@@ -1040,12 +1062,137 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var iPhoneActiveAnswer;
   var iPhoneCommentAnswer;
   var iPhoneAutoCollapse;
+  var iPhoneAnswerMotion;
+  var iPhoneAnswerClick = false;
+  var trackIPhoneAnswerMotion = (event) => {
+    if (iPhoneAnswerClick) return;
+    const button = event.target.closest?.('.ContentItem-more, button[data-zop-retract-question="true"]');
+    const rich = button?.closest('.AnswerItem > .RichContent');
+    const item = rich?.closest('.TopstoryItem');
+    if (!item) return;
+    // 直接切换时让原生点击继续；同步重放同一按钮会被浏览器的 click 重入保护忽略。
+    if (!item.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      if (!rich.classList.contains('is-collapsed')) closeIPhoneAnswerComments(rich);
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (rich.classList.contains('is-collapsed')) changeIPhoneAnswer(rich, () => button.click());
+    else collapseIPhoneAnswer(rich);
+  };
+  var changeIPhoneAnswer = (rich, change) => {
+    const apply = () => {
+      iPhoneAnswerClick = true;
+      try { change(); } finally { iPhoneAnswerClick = false; }
+    };
+    const item = rich.closest('.TopstoryItem');
+    // ponytail: 复用 Safari 原生 WAAPI；减少动态效果或不支持时直接切换，不加载动画库。
+    if (!item?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || iPhoneAnswerMotion?.updating) {
+      apply();
+      return Promise.resolve();
+    }
+    if (iPhoneAnswerMotion) {
+      const previous = iPhoneAnswerMotion;
+      const collapsed = rich.classList.contains('is-collapsed');
+      previous.cancel();
+      return previous.done.then(() => {
+        // 同一个按钮连点时，上一操作已完成相同切换就不再重放。
+        if (rich.classList.contains('is-collapsed') === collapsed) return changeIPhoneAnswer(rich, change);
+      });
+    }
+    const opening = rich.classList.contains('is-collapsed');
+    if (opening && iPhoneActiveAnswer && iPhoneActiveAnswer !== rich && !iPhoneActiveAnswer.classList.contains('is-collapsed')) {
+      const previous = iPhoneActiveAnswer.closest('.TopstoryItem')?.getBoundingClientRect();
+      // 仍在屏幕内的旧回答先平滑收起；屏幕外的回答沿用切换时的直接收起。
+      if (previous?.bottom > 0 && previous.top < innerHeight) {
+        return collapseIPhoneAnswer(iPhoneActiveAnswer, item).then(() => changeIPhoneAnswer(rich, change));
+      }
+    }
+    const root = document.documentElement;
+    const answer = rich.closest('.AnswerItem');
+    const animations = [];
+    const state = { updating: false, cancelled: false, anchors: [],
+      cancel() { state.cancelled = true; animations.forEach(animation => animation.cancel()); } };
+    const animate = (element, frames, duration, delay = 0, pseudoElement = null) => {
+      const animation = element.animate(frames, { duration, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both', pseudoElement });
+      animations.push(animation);
+      return animation;
+    };
+    const visible = rect => rect.bottom > 0 && rect.top < innerHeight;
+    const frame = rect => {
+      const top = Math.max(-32, Math.min(rect.top, innerHeight + 32));
+      return { top, height: Math.max(1, Math.min(rect.bottom, innerHeight + 32) - top), left: rect.left, width: rect.width };
+    };
+    iPhoneAnswerMotion = state;
+    resetIPhoneAutoCollapse();
+    state.done = (async () => {
+      let surface;
+      try {
+        // 先淡出文字与底栏；保留真实内容节点，图片、评论和按钮均不复制。
+        await animate(answer, [{ opacity: getComputedStyle(answer).opacity }, { opacity: 0 }], 100).finished.catch(() => {});
+        const before = new Map([...document.querySelectorAll('.TopstoryItem:has(.AnswerItem)')]
+          .map(row => [row, row.getBoundingClientRect()]));
+        const oldFrame = frame(item.getBoundingClientRect());
+        root.classList.add('jimi-answer-changing');
+        item.classList.add('jimi-answer-morph');
+        surface = document.createElement('div');
+        surface.className = 'jimi-answer-surface';
+        surface.setAttribute('aria-hidden', 'true');
+        surface.style.setProperty('--jimi-surface-shadow', opening ? '0' : '1');
+        Object.assign(surface.style, { top: `${oldFrame.top}px`, left: `${oldFrame.left}px`, width: `${oldFrame.width}px`, height: `${oldFrame.height}px` });
+        (item.closest('.Topstory') || document.body).append(surface);
+        state.updating = true;
+        apply();
+        await Promise.resolve();
+        syncIPhoneAnswerFocus();
+        syncIPhoneExpandedAnswers();
+        syncIPhoneCollapseButtons();
+        await Promise.resolve();
+        state.anchors.forEach(restore => restore());
+        state.updating = false;
+        if (state.cancelled || !item.isConnected) return;
+        const rect = item.getBoundingClientRect(), nextFrame = frame(rect);
+        const contentRect = answer.getBoundingClientRect();
+        const clip = bounds => `inset(${Math.max(0, nextFrame.top - contentRect.top)}px 0 ${Math.max(0, contentRect.bottom - nextFrame.top - bounds.height)}px 0)`;
+        const geometry = bounds => ({ top: `${bounds.top}px`, left: `${bounds.left}px`, width: `${bounds.width}px`, height: `${bounds.height}px` });
+        // 只有无子节点的浮层改变高度；长文高度一次到位，段落不参加逐帧排版。
+        animate(surface, [geometry(oldFrame), geometry(nextFrame)], 420);
+        animate(surface, [{ opacity: opening ? 0 : 1 }, { opacity: opening ? 1 : 0 }], 420, 0, '::after');
+        animate(answer, [{ clipPath: clip(oldFrame), transform: `translateY(${oldFrame.top - nextFrame.top}px)` },
+          { clipPath: clip(nextFrame), transform: 'translateY(0)' }], 420);
+        animate(answer, [{ opacity: 0 }, { opacity: 1 }], 280, 100);
+        const actions = rich.querySelector('.ContentItem-actions');
+        if (!rich.classList.contains('is-collapsed') && actions) animate(actions, [{ opacity: 0 }, { opacity: 1 }], 240, 160);
+        for (const [row, old] of before) {
+          if (row === item || !row.isConnected) continue;
+          const now = row.getBoundingClientRect();
+          if (!visible(old) && !visible(now)) continue;
+          // 只让可见邻卡移过屏幕边缘，避免长文把几千像素的位移挤在最初几帧。
+          const y = new DOMMatrix(getComputedStyle(row).transform).m42;
+          const offset = old.top - now.top;
+          const travel = Math.max(-innerHeight, Math.min(offset, innerHeight));
+          const end = visible(now) ? 0 : offset - travel;
+          animate(row, [{ transform: `translateY(${y + end + travel}px)` },
+            { transform: `translateY(${y + end}px)` }], 420);
+        }
+        await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
+      } finally {
+        animations.forEach(animation => animation.cancel());
+        surface?.remove();
+        item.classList.remove('jimi-answer-morph');
+        root.classList.remove('jimi-answer-changing');
+        if (iPhoneAnswerMotion === state) iPhoneAnswerMotion = undefined;
+        syncIPhoneAutoCollapse(true);
+      }
+    })();
+    return state.done;
+  };
   var resetIPhoneAutoCollapse = () => {
     iPhoneAutoCollapse?.observer.disconnect();
     iPhoneAutoCollapse = undefined;
   };
   var syncIPhoneAutoCollapse = (resized = false) => {
-    if (!isIPhoneLayout || !IPHONE_PRESET.mobile.floatingCollapse || typeof IntersectionObserver === "undefined") return;
+    if (!isIPhoneLayout || iPhoneAnswerMotion || !IPHONE_PRESET.mobile.floatingCollapse || typeof IntersectionObserver === "undefined") return;
     const rich = iPhoneActiveAnswer;
     const actions = rich?.querySelector('.ContentItem-actions');
     const host = rich?.querySelector(':scope > .jimi-action-host');
@@ -1085,12 +1232,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
             if (next.getClientRects().length) { anchor = next; break; }
           }
         }
-        const top = anchor?.getBoundingClientRect().top;
-        collapseIPhoneAnswer(rich);
-        // 向下读过文末时保住下一条；回看开头时保住当前卡片，抵消原生收起的跳转。
-        requestAnimationFrame(() => {
-          if (anchor?.isConnected && (!iPhoneActiveAnswer || iPhoneActiveAnswer === rich)) window.scrollBy(0, anchor.getBoundingClientRect().top - top);
-        });
+        collapseIPhoneAnswer(rich, anchor);
         break;
       }
     }, { rootMargin: `-180px 0px -${bottom}px 0px`, threshold: [0, 1] });
@@ -1126,10 +1268,19 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     else if (toggle?.textContent.includes("收起评论")) toggle.click();
     if (iPhoneCommentAnswer === rich) closeCommentDialog();
   };
-  var collapseIPhoneAnswer = (rich) => {
-    if (iPhoneAutoCollapse?.rich === rich) resetIPhoneAutoCollapse();
-    closeIPhoneAnswerComments(rich);
-    rich.querySelector('button[data-zop-retract-question="true"]')?.click();
+  var collapseIPhoneAnswer = (rich, anchor) => {
+    return changeIPhoneAnswer(rich, () => {
+      const top = anchor?.getBoundingClientRect().top;
+      if (iPhoneAutoCollapse?.rich === rich) resetIPhoneAutoCollapse();
+      closeIPhoneAnswerComments(rich);
+      rich.querySelector('button[data-zop-retract-question="true"]')?.click();
+      // 开始新动画前抵消原生收起跳转，边界收起保住当前／下一张卡片。
+      if (anchor) {
+        const restore = () => { if (anchor.isConnected) window.scrollBy(0, anchor.getBoundingClientRect().top - top); };
+        if (iPhoneAnswerMotion?.updating) iPhoneAnswerMotion.anchors.push(restore);
+        else requestAnimationFrame(restore);
+      }
+    });
   };
   var syncIPhoneAnswerFocus = () => {
     if (!isIPhoneLayout) return;
@@ -1151,12 +1302,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     iPhoneOpenAnswers = open;
     const others = [...open].filter(rich => rich !== active);
     if (!others.length) return;
-    const top = anchor.getBoundingClientRect().top;
-    others.forEach(collapseIPhoneAnswer);
-    // 原生收起可能自动回到旧回答；保持刚展开的回答在当前阅读位置。
-    requestAnimationFrame(() => {
-      if (iPhoneActiveAnswer === active && anchor.isConnected) window.scrollBy(0, anchor.getBoundingClientRect().top - top);
-    });
+    others.forEach(rich => collapseIPhoneAnswer(rich, anchor));
   };
   var syncIPhoneExpandedAnswers = () => {
     if (!isIPhoneLayout) return;
@@ -1243,8 +1389,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         button.setAttribute("aria-label", "收起当前回答");
         button.onclick = () => {
           const preview = content.closest('.jimi-feed-answer')?.querySelector('.jimi-feed-preview');
-          collapseIPhoneAnswer(content);
-          if (preview) requestAnimationFrame(() => { if (preview.getClientRects().length) preview.focus({ preventScroll: true }); });
+          collapseIPhoneAnswer(content).then(() => {
+            if (preview?.getClientRects().length) preview.focus({ preventScroll: true });
+          });
         };
       }
       // 只移动自有按钮；原生作者／赞同／评论继续留在 React 管理的操作栏内。

@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -398,6 +398,38 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(api.formatIPhoneFeedVotes(123456), '123456 人赞同');
   assert.equal(api.formatIPhoneFeedVotes(0), '0 人赞同');
   assert.equal(api.formatIPhoneFeedVotes(undefined), '');
+  // Rapid changes cancel old effects without losing the native mutation or leaving an overlay.
+  const motionClasses = new Set();let surfaces = 0, motionClicks = 0, effects = 0, reduced = false;
+  const classes = { add: c => motionClasses.add(c), remove: c => motionClasses.delete(c) };
+  const motionRow = { classList: classes, isConnected: true, closest: () => null,
+    getBoundingClientRect: () => ({ top: 200, bottom: 400, height: 200, left: 12, width: 378 }),
+    animate() { effects++;return { finished: Promise.resolve(), cancel() {} }; } };
+  const motionRich = { closest: () => motionRow, classList: { contains: () => true }, querySelector: () => null };
+  const motionAPI = load('iPhone Safari', 5, 402, 874, {
+    documentElement: { classList: classes }, body: { append() { surfaces++; } },
+    createElement: () => ({ style: { setProperty() {} }, setAttribute() {}, remove() { surfaces--; }, animate: motionRow.animate }),
+    querySelectorAll: selector => selector === '.TopstoryItem:has(.AnswerItem)' ? [motionRow] : []
+  }, { setTimeout, innerHeight: 874, getComputedStyle: () => ({ opacity: '1' }),
+    window: { addEventListener() {}, matchMedia: () => ({ matches: reduced }) } });
+  await Promise.all([
+    motionAPI.changeIPhoneAnswer(motionRich, () => motionClicks++),
+    motionAPI.changeIPhoneAnswer(motionRich, () => motionClicks++)
+  ]);
+  assert.equal(motionClicks, 2);assert.equal(surfaces, 0);assert.equal(motionClasses.size, 0);
+  const priorEffects = effects;reduced = true;
+  let clicking = false;
+  const nativeMore = { closest: () => motionRich, click() {
+    if (clicking) return; // HTMLElement.click() ignores synchronous re-entry on the same element.
+    clicking = true;
+    let blocked = false;
+    motionAPI.trackIPhoneAnswerMotion({ target: { closest: () => nativeMore }, preventDefault() { blocked = true; }, stopImmediatePropagation() {} });
+    if (!blocked) motionClicks++;
+    clicking = false;
+  } };
+  nativeMore.click();
+  assert.equal(motionClicks, 3, 'Reduced-motion fallback must let the native click run once, without recursion');
+  assert.equal(effects, priorEffects, 'Reduced motion never starts an animation');
+
   assert.equal(api.formatIPhoneFeedVotes('bad'), '');
   api.cacheIPhoneFeedAuthors([{ target: { type: 'answer', id: 'large-id-as-string', author: { name: '作者', avatar_url: 'https://example.org/avatar.jpg' } } }]);
   assert.equal(api.iPhoneFeedAuthors.get('large-id-as-string').name, '作者');
@@ -486,5 +518,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, cancellable answer transitions and reduced-motion native clicks, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
 })().catch(error => { console.error(error); process.exitCode = 1; });
