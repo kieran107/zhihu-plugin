@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.36
+// @version      1.37
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -788,12 +788,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton:not(.VoteButton--down) { --jimi-action-icon: var(--jimi-like-icon); }
       html.jim-iphone .AnswerItem .ContentItem-actions button:has(.Zi--Comment, .ZDI--ChatBubbleFill24) { --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M5%203h14a2%202%200%200%201%202%202v11a2%202%200%200%201-2%202H9l-6%204V5a2%202%200%200%201%202-2Z%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
-      html.jim-iphone .AnswerItem .ContentItem-actions .jimi-iphone-collapse { grid-column: 4; --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m5%2015%207-7%207%207M5%204h14%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
+      html.jim-iphone .AnswerItem .ContentItem-actions .jimi-iphone-collapse { grid-column: 1; --jimi-action-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m5%2015%207-7%207%207M5%204h14%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); }
       html.jim-iphone .AnswerItem .ContentItem-actions .VoteButton[aria-pressed="true"] { --jimi-like-icon: var(--jimi-like-icon-filled); color: var(--jimi-liked) !important; }
       html.jim-iphone .AnswerItem .ContentItem-actions button[data-jimi-label="收起评论"] { color: var(--jimi-comment-open) !important; }
       html.jim-iphone .AnswerItem .ContentItem-actions > .jimi-answer-author {
         grid-column: 1; display: flex; align-items: center; justify-content: center; text-decoration: none;
       }
+      html.jim-iphone .AnswerItem .ContentItem-actions:has(> .jimi-iphone-collapse) > .jimi-answer-author { grid-column: 4; }
       html.jim-iphone .jimi-answer-author img { width: 34px !important; height: 34px !important; flex: 0 0 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--jimi-avatar-gap), 0 0 0 3px var(--jimi-avatar-ring); }
       html.jim-iphone .jimi-answer-author img[hidden] { display: none; }
       html.jim-iphone .jimi-answer-author span { display: none; }
