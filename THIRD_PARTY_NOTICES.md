@@ -35,10 +35,10 @@
 
 ## 视觉参考：Claude / Anthropic 暖纸配色
 
-核对日期：2026-09-30。
+核对日期：2026-10-03。
 
 - [Anthropic 官方品牌规范](https://github.com/anthropics/skills/blob/main/skills/brand-guidelines/SKILL.md)：暖白 `#faf9f5`、暖灰 `#e8e6dc`、深色 `#141413`、陶土 `#d97757` 等基础色。
 - [Claude Light Theme](https://github.com/AuroralFrost/claude-light-theme)：社区制作的编辑器主题，参考其暖纸、深棕灰文字与蓝色状态的搭配思路；它不是 Anthropic 官方主题规范。
 - [Claude Code 终端主题说明](https://code.claude.com/docs/en/terminal-config)：终端主题与终端自身配色相互独立，不能视作完整的网页 UI 配色表。
 
-本项目仅参考色彩方向，自行调整阅读对比度、纸面层次和组件状态；不引入外部主题代码、字体、品牌标志或依赖，不声称官方合作。
+本项目以暖白、暖灰、炭黑为主，橙色仅作状态点缀；参考色彩方向并自行调整阅读对比度、纸面层次和组件状态；不引入外部主题代码、字体、品牌标志或依赖，不声称官方合作。
