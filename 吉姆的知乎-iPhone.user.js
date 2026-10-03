@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.37
+// @version      1.38
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -73,13 +73,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       "theme": "2",
       "themeLight": "8",
       "themeDark": "1",
-      "fontSizeForList": "17",
-      "fontSizeForAnswer": "19",
+      "fontSizeForList": "18",
+      "fontSizeForAnswer": "20",
       "fontSizeForArticle": "18",
-      "fontSizeForListTitle": "20",
+      "fontSizeForListTitle": "21",
       "fontSizeForAnswerTitle": "22",
       "fontSizeForArticleTitle": "26",
-      "contentLineHeight": "31",
+      "contentLineHeight": "33",
       "answerOpen": "default",
       "homeContentOpen": "0",
       "linkShopping": "2",
@@ -719,8 +719,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])::after,
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichText :is(a, .highlight-wrap, [data-highlight-id])::before,
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner .RichContent-EntityWord svg { display: none !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-time { display: block !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .ContentItem-time > a { display: block; }
+      html.jim-iphone .jimi-answer-ip { display: block; color: var(--jimi-feed-muted); }
       html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner { font-size: ${IPHONE_PRESET.script.fontSizeForAnswer}px !important; }
-      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner :is(.RichText, blockquote) { color: var(--jimi-answer-text) !important; }
+      html.jim-iphone .AnswerItem > .RichContent:not(.is-collapsed) .RichContent-inner :is(.RichText, blockquote) { color: var(--jimi-answer-text) !important; line-height: ${IPHONE_PRESET.script.contentLineHeight}px !important; }
       html.jim-iphone .jimi-batch-extra,
       html.jim-iphone .Topstory-recommend.jimi-batch-full > :not(.TopstoryItem) { display: none !important; }
       html.jim-iphone .Topstory-container:has(.jimi-batch-full) { margin-bottom: 0 !important; }
@@ -1011,7 +1014,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme] .Profile-main .List-itemMeta { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--jimi-feed-muted); }
       html.jim-iphone[data-theme] .Profile-main .ActivityItem-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; color: var(--jimi-feed-muted); }
       html.jim-iphone[data-theme] .Profile-main .ActivityItem-metaTitle { color: inherit; }
-      html.jim-iphone[data-theme] .Profile-main .ContentItem-title { font-size: 20px; line-height: 1.4; overflow-wrap: anywhere; }
+      html.jim-iphone[data-theme] .Profile-main .ContentItem-title { font-size: ${IPHONE_PRESET.script.fontSizeForListTitle}px; line-height: 1.4; overflow-wrap: anywhere; }
       html.jim-iphone[data-theme] .Profile-main .RichContent.is-collapsed .RichContent-inner { max-height: none !important; }
       html.jim-iphone[data-theme] .Profile-main :is(.Pagination, .EmptyState) { padding: 20px 15px; color: var(--jimi-feed-muted); background: transparent !important; }
       html.jim-iphone[data-theme] .Profile-main .Pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
@@ -1455,9 +1458,41 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!others.length) return;
     others.forEach(rich => collapseIPhoneAnswer(rich, anchor));
   };
+  var formatIPhoneAnswerIP = (value) => typeof value === "string"
+    ? value.replace(/^[\s·・•|｜]+/, "").replace(/^IP\s*属地[：:\s]*/, "").trim() : "";
+  var syncIPhoneAnswerIP = (rich) => {
+    const time = rich.querySelector('.ContentItem-time');
+    if (!time?.querySelector(':scope > a')) return;
+    // 保留原生日期链接与文本节点的父节点，只整理回答自身的属地。
+    // React 可能把分隔符与属地拆成两个文本节点，合并读取但不移动节点。
+    const nativeIP = [...time.childNodes].filter(node => node.nodeType === 3 && node.textContent.trim());
+    if (nativeIP.length) {
+      const region = formatIPhoneAnswerIP(nativeIP.map(node => node.textContent).join(""));
+      const label = region ? `IP 属地：${region}` : "";
+      nativeIP.forEach((node, index) => {
+        const text = index === nativeIP.length - 1 ? label : "";
+        if (node.textContent !== text) node.textContent = text;
+      });
+      time.querySelector('.jimi-answer-ip')?.remove();
+      return;
+    }
+    const id = String(parseJSONAttr(rich.closest('.AnswerItem')?.getAttribute('data-zop'))?.itemId || "");
+    const answer = store.getJsInitialData()?.initialState?.entities?.answers?.[id] || store.getUserAnswer().find(item => String(item.id) === id);
+    const region = formatIPhoneAnswerIP(answer?.ipInfo ?? answer?.ip_info);
+    let line = time.querySelector('.jimi-answer-ip');
+    if (!region) { line?.remove(); return; }
+    if (!line) {
+      line = document.createElement('span');
+      line.className = 'jimi-answer-ip';
+      time.append(line);
+    }
+    const label = `IP 属地：${region}`;
+    if (line.textContent !== label) line.textContent = label;
+  };
   var syncIPhoneExpandedAnswers = () => {
     if (!isIPhoneLayout) return;
     for (const rich of document.querySelectorAll('.AnswerItem > .RichContent:not(.is-collapsed)')) {
+      syncIPhoneAnswerIP(rich);
       if (!iPhoneObservedAnswers.has(rich)) {
         // 知乎滚动时会替换操作栏，页面高度未必变化；在重绘前补回作者与收起位置。
         new MutationObserver((changes) => {

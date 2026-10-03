@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, handleIPhoneLinkClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerIP, formatIPhoneAnswerIP, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, handleIPhoneLinkClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -136,6 +136,36 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal((await api.myStorage.getConfig(true)).theme, preset.script.theme);
   assert.equal(api.applyCodePreset({ notInterestedList: 'bad' }).notInterestedList.length, preset.script.notInterestedList.length);
   assert.equal(api.applyCodePreset({ blockedUsers: [{ id: 'same', tags: ['a'] }, { id: 'same', tags: ['b'] }] }).blockedUsers[0].tags.join(','), 'a,b');
+  // Answer IP belongs below its date, without using author location or adding requests.
+  let ipLine, ipAppends = 0;
+  const nativeIP = { nodeType: 3, textContent: '・四川' };
+  const ipTime = {
+    childNodes: [nativeIP], querySelector: selector => selector === ':scope > a' ? {} : ipLine,
+    append: line => { ipAppends++; ipLine = line; }
+  };
+  const ipRich = { querySelector: () => ipTime, closest: () => ({ getAttribute: () => '{"itemId":"42"}' }) };
+  const ipAPI = load('iPhone Safari', 5, 402, 874, {
+    createElement: () => ({ remove() { ipLine = undefined; } })
+  });
+  ipAPI.syncIPhoneAnswerIP(ipRich);ipAPI.syncIPhoneAnswerIP(ipRich);
+  assert.equal(nativeIP.textContent, 'IP 属地：四川');assert.equal(ipAppends, 0);
+  nativeIP.textContent = '・浙江';ipAPI.syncIPhoneAnswerIP(ipRich);
+  assert.equal(nativeIP.textContent, 'IP 属地：浙江');
+  nativeIP.textContent = '・';const nativeRegion = { nodeType: 3, textContent: '北京' };
+  ipTime.childNodes.push(nativeRegion);ipAPI.syncIPhoneAnswerIP(ipRich);ipAPI.syncIPhoneAnswerIP(ipRich);
+  assert.equal(nativeIP.textContent, '');assert.equal(nativeRegion.textContent, 'IP 属地：北京');
+  nativeRegion.textContent = '浙江';ipAPI.syncIPhoneAnswerIP(ipRich);assert.equal(nativeRegion.textContent, 'IP 属地：浙江');
+  nativeRegion.textContent = '';
+  nativeIP.textContent = '';
+  ipAPI.store.setJsInitialData({ initialState: { entities: { answers: { '42': { ipInfo: '上海' } }, users: { author: { ipInfo: '四川' } } } } });
+  ipAPI.syncIPhoneAnswerIP(ipRich);ipAPI.syncIPhoneAnswerIP(ipRich);
+  assert.equal(ipLine.textContent, 'IP 属地：上海');assert.equal(ipAppends, 1);
+  ipAPI.store.setJsInitialData({});ipAPI.store.setUserAnswer([{ id: '42', ip_info: 'IP 属地广东' }]);
+  ipAPI.syncIPhoneAnswerIP(ipRich);assert.equal(ipLine.textContent, 'IP 属地：广东');
+  ipAPI.store.setUserAnswer([]);ipAPI.syncIPhoneAnswerIP(ipRich);
+  assert.equal(ipLine, undefined);
+  for (const missing of [null, undefined, '', '  ', {}, false]) assert.equal(ipAPI.formatIPhoneAnswerIP(missing), '');
+  assert.equal(ipAPI.formatIPhoneAnswerIP('IP 属地： 四川 '), '四川');
   // Auto theme follows the device preference without changing stored settings.
   assert.equal(preset.script.theme, '2');
   let systemDark = true;
@@ -586,5 +616,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, cancellable answer transitions and reduced-motion native clicks, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection, original-image selection and native new-tab navigation guards');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, cancellable answer transitions and reduced-motion native clicks, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection, original-image selection, native new-tab navigation guards and answer IP beneath its date');
 })().catch(error => { console.error(error); process.exitCode = 1; });
