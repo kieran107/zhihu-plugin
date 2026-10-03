@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.40
+// @version      1.41
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -897,7 +897,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       /* 复用原生收起评论按钮，悬浮范围限制在当前评论区。 */
       html.jimi-readonly-comments[data-theme] .css-kt4t4n {
         position: sticky !important; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 4;
-        width: 120px !important; height: 52px; margin: 8px 0 0 auto !important; padding: 0 !important;
+        width: 120px !important; height: 52px; margin: 8px auto 0 0 !important; padding: 0 !important;
         background: transparent !important;
       }
       html.jimi-readonly-comments .css-kt4t4n .css-p1wstz {
@@ -916,7 +916,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-readonly-comments[data-theme] .css-1aq8hf9 .css-tpyajk > .css-1onritu { padding-right: 14px !important; }
       html.jimi-readonly-comments[data-theme] .css-1aq8hf9 > button[aria-label="关闭"] {
         display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-        top: auto; right: 12px; bottom: 12px; width: 120px; height: 52px; padding: 0 8px;
+        top: auto; left: 12px; right: auto; bottom: 12px; width: 120px; height: 52px; padding: 0 8px;
         border: 1px solid var(--jimi-bar-border) !important; border-radius: 18px; background: var(--jimi-bar-bg) !important;
         box-shadow: var(--jimi-bar-shadow);
         color: var(--jimi-bar-text) !important; font-size: 15px; line-height: 1.2; white-space: nowrap; touch-action: manipulation;
