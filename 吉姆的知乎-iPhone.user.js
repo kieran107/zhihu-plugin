@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.35
+// @version      1.36
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -57,7 +57,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     "mobile": {
       "enabled": true,
       "pagePadding": 21,
-      "openInternalLinksInSameTab": true,
+      "openInternalLinksInSameTab": false,
       "hideSidebars": true,
       "hideOpenApp": true,
       "listImageMaxLines": 2,
@@ -364,9 +364,27 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     document.documentElement.classList.toggle("jimi-feed-route", isIPhoneLayout && /^\/(?:follow|hot)?$/.test(location.pathname));
     document.documentElement.classList.toggle("jimi-profile-route", isIPhoneLayout && /^\/(?:people|org)\/[^/]+(?:\/|$)/.test(location.pathname));
   };
+  // 留住当前文档与回答；用浏览器原生新标签页，避免站内路由先替换阅读页。
+  var handleIPhoneLinkClick = (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.("a[href]");
+    if (!link || link.hasAttribute("download")) return;
+    let url;
+    try { url = new URL(link.href, location.href); } catch { return; }
+    if (!/^https?:$/.test(url.protocol)) return;
+    if (IPHONE_PRESET.mobile.openInternalLinksInSameTab) {
+      if (/(^|\.)zhihu\.com$/.test(url.hostname)) link.target = "_self";
+      return;
+    }
+    if (url.hash && url.origin === location.origin && url.pathname === location.pathname && url.search === location.search) return;
+    link.target = "_blank";
+    link.relList.add("noopener");
+    event.stopImmediatePropagation(); // 保留默认打开动作，阻止原生点击路由改写当前页。
+  };
   var initIPhoneLayout = () => {
     if (!isIPhoneLayout) return;
     window.addEventListener("click", blockIPhoneAnswerTextClick, true);
+    window.addEventListener("click", handleIPhoneLinkClick, true);
     window.addEventListener("click", trackIPhoneCommentAnswer, true);
     window.addEventListener("click", trackIPhoneAnswerMotion, true);
     // 新触摸或视口改变时让出动画层，阅读与原生滚动优先。
@@ -413,7 +431,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     new MutationObserver(setViewport).observe(document.documentElement, {
       attributes: true, attributeFilter: ["data-theme"]
     });
-    const { pagePadding, hideSidebars, hideOpenApp, openInternalLinksInSameTab } = IPHONE_PRESET.mobile;
+    const { pagePadding, hideSidebars, hideOpenApp } = IPHONE_PRESET.mobile;
     const listImageHeight = (Number(IPHONE_PRESET.script.fontSizeForList) || 17) * 1.67 * IPHONE_PRESET.mobile.listImageMaxLines;
     const answerImageHeight = (Number(IPHONE_PRESET.script.contentLineHeight) || 31) * IPHONE_PRESET.mobile.answerImageMaxLines;
     fnAppendStyle("JIMI_IPHONE_STYLE", `
@@ -1003,15 +1021,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         .MobileAppHeader-downloadLink, .AppBanner, .css-rg1dmv, .css-1gapyfo, .css-183aq3r, .css-wfkf2m) { display: none !important; }` : ""}
     `);
     setViewport();
-    if (openInternalLinksInSameTab) {
-      document.addEventListener("click", (event) => {
-        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        const link = event.target.closest?.("a[href]");
-        if (!link || link.hasAttribute("download")) return;
-        const url = new URL(link.href, location.href);
-        if (/^https?:$/.test(url.protocol) && /(^|\.)zhihu\.com$/.test(url.hostname)) link.target = "_self";
-      }, true);
-    }
   };
 
   // 推荐只展示过滤后的前 N 条；到底停止加载，刷新交给浏览器原生操作。

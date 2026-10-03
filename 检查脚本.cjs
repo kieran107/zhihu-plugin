@@ -51,7 +51,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, handleIPhoneLinkClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -74,6 +74,39 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal(api.isIPhoneLayout, true);
   assert.equal(load('Macintosh Safari', 0, 1440, 900).isIPhoneLayout, false);
   assert.equal(load('iPhone Safari', 5, 874, 402).isIPhoneLayout, true); // landscape
+  // Preserve the original document: native new-tab default survives, site click routing does not.
+  assert.equal(preset.mobile.openInternalLinksInSameTab, false);
+  const readingLocation = new URL('https://www.zhihu.com/question/123?sort=default');
+  const navigation = load('iPhone Safari', 5, 402, 874, {}, { URL, location: readingLocation });
+  for (const [href, options, opens] of [
+    ['https://www.zhihu.com/people/author', {}, true],
+    ['https://zhuanlan.zhihu.com/p/123', {}, true],
+    ['https://example.com/article', {}, true],
+    [readingLocation.href, {}, true],
+    [readingLocation.href + '#answer', {}, false],
+    ['https://www.zhihu.com/question/456#answer', {}, true],
+    ['mailto:reader@example.com', {}, false],
+    ['javascript:void(0)', {}, false],
+    ['http://[invalid', {}, false],
+    ['https://example.com', { download: true }, false],
+    ['https://example.com', { defaultPrevented: true }, false],
+    ['https://example.com', { button: 1 }, false],
+    ...['metaKey', 'ctrlKey', 'shiftKey', 'altKey'].map(key => ['https://example.com', { [key]: true }, false])
+  ]) {
+    const rel = new Set(['nofollow']);
+    const link = { href, target: '_self', hasAttribute: name => name === 'download' && options.download, relList: { add: value => rel.add(value) } };
+    let stopped = false;
+    navigation.handleIPhoneLinkClick({
+      button: 0, ...options, target: { closest: () => link },
+      stopImmediatePropagation() { stopped = true; },
+      preventDefault() { assert.fail('Native new-tab default must remain available'); }
+    });
+    assert.equal(stopped, opens, href);
+    assert.equal(link.target, opens ? '_blank' : '_self', href);
+    assert.equal(rel.has('noopener'), opens);
+    assert.ok(rel.has('nofollow'));
+  }
+  navigation.handleIPhoneLinkClick({ button: 0, target: { closest: () => null } });
   for (const phone of [false, true]) {
     const nodes = [];
     const layout = load('Macintosh Safari', phone ? 5 : 0, phone ? 402 : 1440, 874, {
@@ -553,5 +586,5 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   batchAPI.syncIPhoneFeedBatch();
   assert.equal(batchAPI.iPhoneFeedBatch.full, false);
   assert.equal(batchAPI.shouldStopIPhoneFeedRequest(nextFeed), false);
-  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, cancellable answer transitions and reduced-motion native clicks, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection and original-image selection');
+  console.log('PASS: syntax, Markdown sync, local original hashes when present, release metadata and version migration, no settings UI, automatic light/dark theme, phone detection, preset priority, persistence, bounded native toolbar, dock-before-comments, armed auto-collapse boundaries and comment guards, cancellable answer transitions and reduced-motion native clicks, collapse, single-answer focus and linked comment dismissal, avatars, Safari fetch, filtered 10-item cap, no bottom refresh code, expanded author footer, plain-text click protection, original-image selection and native new-tab navigation guards');
 })().catch(error => { console.error(error); process.exitCode = 1; });

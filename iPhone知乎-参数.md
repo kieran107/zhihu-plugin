@@ -1,6 +1,6 @@
 # 吉姆的知乎 · iPhone Safari：参数说明
 
-适用：iPhone 16 Pro 的 Safari，知乎开启「请求桌面网站」。当前版本：`1.35`。上游基线：知乎修改器网页端 5.21.4；旧移动端 2.9.4 仅参考隐藏 App 引导等显示方式。来源及许可见 [第三方说明](THIRD_PARTY_NOTICES.md)。
+适用：iPhone 16 Pro 的 Safari，知乎开启「请求桌面网站」。当前版本：`1.36`。上游基线：知乎修改器网页端 5.21.4；旧移动端 2.9.4 仅参考隐藏 App 引导等显示方式。来源及许可见 [第三方说明](THIRD_PARTY_NOTICES.md)。
 
 加载优化：主题、字号和隐藏规则在读取扩展存储前生效；推荐卡片先过滤、排版再显示，介绍区随首批回答出现。`saveHistory: false` 时不读取历史存储。已删除设置面板的闲置菜单、表单和专用样式，参数仍只在本文件调整。
 
@@ -66,7 +66,7 @@
 | `mobile.floatingCollapse` | 展开回答内的整体悬浮操作栏，默认开启；到文末阴影槽归位，使用知乎原生点赞、评论与收起行为 |
 | `script.hiddenListImg` | 是否完全隐藏列表图片，当前 true；头像保留 |
 | `mobile.pagePadding` | 普通页面左右留白，当前 21 CSS 像素；紧凑推荐／关注列表使用 12px 卡片外边距＋15px 内边距，文字距屏幕边缘仍为 27px |
-| `mobile.openInternalLinksInSameTab` | 普通点击知乎站内链接在本标签页打开；外链、下载、带修饰键点击不改 |
+| `mobile.openInternalLinksInSameTab` | 当前 false，可跳转的链接和头像在新标签页打开，保留原阅读页；true 恢复站内链接在当前页打开。页内锚点、下载、非网页链接和带修饰键点击保留原生行为 |
 | `mobile.hideSidebars` | 隐藏首页、问题、搜索、用户主页和收藏夹的侧栏 |
 | `mobile.hideOpenApp` | 隐藏已知 App 引导；不保证覆盖未来新增样式 |
 | `script.fontSizeForList` | 列表摘要字号，当前 17；摘要行高为字号的 1.5 倍，即 25.5px |
@@ -108,7 +108,7 @@
   "mobile": {
     "enabled": true,
     "pagePadding": 21,
-    "openInternalLinksInSameTab": true,
+    "openInternalLinksInSameTab": false,
     "hideSidebars": true,
     "hideOpenApp": true,
     "listImageMaxLines": 2,
