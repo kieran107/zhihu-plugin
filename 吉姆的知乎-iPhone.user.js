@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.34
+// @version      1.35
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -362,6 +362,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   );
   var syncIPhonePageRoute = () => {
     document.documentElement.classList.toggle("jimi-feed-route", isIPhoneLayout && /^\/(?:follow|hot)?$/.test(location.pathname));
+    document.documentElement.classList.toggle("jimi-profile-route", isIPhoneLayout && /^\/(?:people|org)\/[^/]+(?:\/|$)/.test(location.pathname));
   };
   var initIPhoneLayout = () => {
     if (!isIPhoneLayout) return;
@@ -557,7 +558,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone[data-theme="light"] :is(.PlaceHolder-inner, .PlaceHolder-bg, .skeleton) { background: var(--jimi-pill-bg) !important; }
       html.jim-iphone[data-theme="light"] :is(.Modal-backdrop, .css-zbtg51 > .css-5ym188) { background: #3b3329a6 !important; }
       html.jim-iphone[data-theme="light"] ::selection { background: #d9775733; color: var(--jimi-feed-text); }
-      html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
+      html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, .jimi-profile-route, :has(.Topstory)) { --jimi-page-bg: var(--jimi-feed-canvas); }
       /* Safari 顶栏需要可取色的实色 fixed 元素；12px 高于其细边框过滤阈值，伪元素底板仍负责完整纹理。 */
       html.jim-iphone #JIMI_SAFARI_TINT {
         position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 1;
@@ -568,14 +569,14 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone.jimi-compact-feed:is(.jimi-feed-route, :has(.Topstory)) #JIMI_SAFARI_TINT {
         background-image: var(--jimi-canvas-top); background-size: 100% 96px; background-repeat: no-repeat;
       }
-      html.jim-iphone.jimi-compact-feed .Topstory {
+      html.jim-iphone.jimi-compact-feed :is(.Topstory, .App-main > div:has(> #ProfileHeader)) {
         position: relative; isolation: isolate;
         --jimi-grid-size: calc(100vw / 20);
         --jimi-grid-tail: mod(calc(100% - 96px), var(--jimi-grid-size));
       }
       html.jim-iphone.jimi-compact-feed .Topstory-mainColumnCard { box-shadow: none !important; }
       /* 横线按透视递密，但最小间距为 1.5px，继续画到尖端；不截断、不填灰，避免空白与混叠。 */
-      html.jim-iphone.jimi-compact-feed .Topstory::before {
+      html.jim-iphone.jimi-compact-feed :is(.Topstory, .App-main > div:has(> #ProfileHeader))::before {
         content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
         box-shadow: inset 0 -1px 0 var(--jimi-grid-line);
         bottom: var(--jimi-grid-tail);
@@ -609,12 +610,12 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-compact-feed .jimi-feed-outro > span { bottom: var(--jimi-grid-tail); height: 120px; }
       @media (prefers-reduced-motion: reduce) {
         html.jim-iphone #JIMI_SAFARI_TINT { background-image: none !important; }
-        html.jim-iphone.jimi-compact-feed .Topstory::before,
+        html.jim-iphone.jimi-compact-feed :is(.Topstory, .App-main > div:has(> #ProfileHeader))::before,
         html.jimi-compact-feed .jimi-feed-intro :is(.jimi-feed-imprint, .jimi-feed-refresh-hint),
         html.jimi-compact-feed .jimi-feed-outro > span { position: absolute; }
       }
       html.jimi-compact-feed .Topstory-recommend.jimi-batch-full + .jimi-feed-outro { display: flex; height: 120px; font-size: 13px; line-height: 20px; letter-spacing: 1px; }
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem) {
+      html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem) {
         margin: 0 12px 12px !important;
         padding: 12px max(15px, calc(env(safe-area-inset-left) - 12px)) 12px max(15px, calc(env(safe-area-inset-right) - 12px)) !important;
         border: 0 !important;
@@ -622,15 +623,15 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         position: relative; overflow: visible !important; transition: transform 520ms cubic-bezier(.4, 0, .2, 1);
       }
       /* 阴影形状保持不变，只渐变透明度，避免逐帧插值长卡片的模糊阴影。 */
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after {
+      html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem)::after {
         content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
         box-shadow: var(--jimi-card-focus-shadow); opacity: 0;
         transition: opacity 520ms cubic-bezier(.4, 0, .2, 1);
       }
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed))::after { opacity: 1; }
+      html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.jimi-reading-answer > .RichContent:not(.is-collapsed))::after { opacity: 1; }
       /* 用前后卡片位移拉开视觉间距，不逐帧改变长回答高度或外边距。 */
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem):has(~ .TopstoryItem .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-24px); }
-      html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ .TopstoryItem:has(.AnswerItem) { transform: translateY(24px); }
+      html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem):has(~ :is(.TopstoryItem, .jimi-profile-item) .jimi-reading-answer > .RichContent:not(.is-collapsed)) { transform: translateY(-24px); }
+      html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.jimi-reading-answer > .RichContent:not(.is-collapsed)) ~ :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem) { transform: translateY(24px); }
       /* 动画只作用于视口内的独立底框、裁切和透明度，不插值正文布局高度。 */
       .jimi-answer-surface {
         position: fixed; pointer-events: none; z-index: 1000; border-radius: 18px;
@@ -641,21 +642,21 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         content: ""; position: absolute; inset: 0; border-radius: inherit;
         box-shadow: var(--jimi-card-focus-shadow); opacity: var(--jimi-surface-shadow, 0);
       }
-      html.jim-iphone.jimi-answer-changing .TopstoryItem.jimi-answer-morph {
+      html.jim-iphone.jimi-answer-changing :is(.TopstoryItem, .jimi-profile-item).jimi-answer-morph {
         z-index: 1001; background: transparent !important; box-shadow: none !important;
       }
-      html.jim-iphone .TopstoryItem.jimi-answer-morph::after { opacity: 0 !important; }
-      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) .TopstoryItem:has(.AnswerItem),
-      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) .TopstoryItem:has(.AnswerItem)::after { transition: none; }
+      html.jim-iphone :is(.TopstoryItem, .jimi-profile-item).jimi-answer-morph::after { opacity: 0 !important; }
+      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem),
+      html.jim-iphone:is(.jimi-answer-changing, .jimi-answer-instant) :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem)::after { transition: none; }
       @media (prefers-reduced-motion: reduce) {
-        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem),
-        html.jim-iphone.jimi-compact-feed .TopstoryItem:has(.AnswerItem)::after { transition: none; }
+        html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem),
+        html.jim-iphone.jimi-compact-feed :is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem)::after { transition: none; }
       }
-      html.jimi-compact-feed .TopstoryItem:has(.AnswerItem > .RichContent.is-collapsed .ContentItem-more):not(.jimi-feed-item) { visibility: hidden; }
+      html.jimi-compact-feed :is(.TopstoryItem, .Profile-main .List-item):has(.AnswerItem > .RichContent.is-collapsed .ContentItem-more):not(.jimi-feed-item) { visibility: hidden; }
       html.jimi-compact-feed .jimi-feed-answer { padding-bottom: 0; border-bottom: 0; }
       html.jim-iphone .AnswerItem.jimi-read-answer:has(> .RichContent.is-collapsed) { opacity: .55; }
       html.jimi-compact-feed .jimi-feed-item :is(.FeedSource, .TopstoryItem-topic) { display: none !important; }
-      html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > :is(.ContentItem-title, .AnswerItem-authorInfo, .RichContent) { display: none !important; }
+      html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > :is(.ContentItem-title, .ContentItem-meta, .AnswerItem-authorInfo, .RichContent) { display: none !important; }
       html.jimi-compact-feed .jimi-feed-preview { display: none; }
       html.jimi-compact-feed .jimi-feed-answer:has(> .RichContent.is-collapsed) > .jimi-feed-preview {
         display: block; width: 100%; min-height: 44px; border: 0; padding: 0; margin: 0;
@@ -919,6 +920,83 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jim-iphone .css-16xeo9u button { min-height: 44px; flex-shrink: 0; white-space: nowrap; }
       html.jim-iphone .css-kt4t4n { width: 100%; max-width: 100%; margin-left: 0 !important; margin-right: 0 !important; box-sizing: border-box; }
       html.jim-iphone .Post-SideActions { display: none !important; }
+      /* 作者主页：资料、原生分类与阅读卡片；沿用推荐页的纸面和主题变量。 */
+      html.jim-iphone[data-theme] :is(#ProfileHeader, .Profile-main, .Profile-mainColumn,
+        .ProfileMain, .ProfileMain .ListShortcut, .ProfileMain .ListShortcut > div) { background: transparent !important; }
+      html.jim-iphone[data-theme] #ProfileHeader { margin: 12px 0 !important; padding: 0 12px; }
+      html.jim-iphone[data-theme] #ProfileHeader > .Card {
+        margin: 0; border: 0; border-radius: 18px; overflow: hidden;
+        background: var(--jimi-feed-bg) !important; box-shadow: var(--jimi-card-shadow) !important;
+      }
+      html.jim-iphone[data-theme] .ProfileHeader-userCover { display: none !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-wrapper { padding: 20px 15px 15px !important; background: transparent !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-main { position: relative; display: flex; align-items: flex-start; gap: 15px; min-height: 0; padding: 0 !important; margin: 0 !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-avatar {
+        position: static !important; flex: 0 0 64px; width: 64px !important; height: 64px !important;
+        margin: 0; padding: 0; border: 0; border-radius: 50%;
+      }
+      html.jim-iphone[data-theme] .ProfileHeader-avatar .Avatar {
+        width: 64px !important; height: 64px !important; box-sizing: border-box;
+        border: 2px solid var(--jimi-feed-bg); border-radius: 50%; object-fit: cover;
+        box-shadow: 0 0 0 1px var(--jimi-avatar-ring);
+      }
+      html.jim-iphone[data-theme] .ProfileHeader-content { flex: 1; width: auto; min-width: 0; border: 0 !important; padding: 0 !important; margin: 0 !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-contentHead { display: block; padding: 0 !important; margin: 0; }
+      html.jim-iphone[data-theme] .ProfileHeader-title { display: block; margin: 0; line-height: 1.4; }
+      html.jim-iphone[data-theme] .ProfileHeader-name { display: block; font-size: 26px; font-weight: 650; color: var(--jimi-feed-text); overflow-wrap: anywhere; }
+      html.jim-iphone[data-theme] .ProfileHeader-headline { display: block; margin: 6px 0 0; font-size: 16px; line-height: 1.6; color: var(--jimi-feed-muted); white-space: normal; }
+      html.jim-iphone[data-theme] .ProfileHeader-headline:empty { display: none; }
+      html.jim-iphone[data-theme] .ProfileHeader-contentBody { font-size: 15px; line-height: 1.65; color: var(--jimi-feed-muted); transition: none !important; }
+      html.jim-iphone[data-theme] :is(.ProfileHeader-info, .ProfileHeader-detail) { padding: 10px 0 0 !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-detailItem { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 10px; }
+      html.jim-iphone[data-theme] .ProfileHeader-detailLabel { width: auto; min-width: 60px; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .ProfileHeader-detailValue { flex: 1 1 130px; min-width: 0; width: auto; overflow-wrap: anywhere; }
+      html.jim-iphone[data-theme] .ProfileHeader-contentFooter { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 8px; padding: 0 !important; }
+      html.jim-iphone[data-theme] .ProfileHeader-expandButton { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; margin: 0; padding: 0; font-size: 14px; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .ProfileHeader-buttons { position: static !important; width: auto; display: flex; flex-wrap: wrap; gap: 8px; float: none; margin: 0; }
+      html.jim-iphone[data-theme] .ProfileHeader-buttons .Button {
+        display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px;
+        max-width: 100%; margin: 0 !important; padding: 0 12px; border-radius: 12px;
+        font-size: 15px; line-height: 1.4; color: var(--jimi-feed-text) !important;
+        border: 1px solid var(--jimi-feed-line) !important; background: var(--jimi-bar-bg) !important;
+      }
+      html.jim-iphone[data-theme] .ProfileHeader-buttons .FollowButton { color: var(--jimi-liked) !important; }
+      html.jim-iphone[data-theme] .ProfileMain { margin: 0; border: 0; box-shadow: none !important; overflow: visible; }
+      html.jim-iphone[data-theme] .ProfileMain-header {
+        display: flex; align-items: center; min-width: 0; margin: 0 12px 12px; padding: 0 8px;
+        border: 0; border-radius: 18px; background: var(--jimi-feed-bg) !important; box-shadow: var(--jimi-card-shadow);
+      }
+      html.jim-iphone[data-theme] .ProfileMain-tabs {
+        flex: 1; display: flex; width: auto; min-width: 0; margin: 0; padding: 0 !important;
+        border: 0; background: transparent !important; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+      }
+      html.jim-iphone .ProfileMain-tabs::-webkit-scrollbar { display: none; }
+      html.jim-iphone[data-theme] .ProfileMain-tabs .Tabs-item { flex: 0 0 auto; padding: 0 10px; }
+      html.jim-iphone[data-theme] .ProfileMain-tabs .Tabs-link { display: flex; align-items: center; gap: 5px; min-height: 52px; padding: 0; font-size: 16px; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] .ProfileMain-tabs .Tabs-link.is-active { font-weight: 600; color: var(--jimi-feed-text) !important; }
+      html.jim-iphone[data-theme] .ProfileMain-tabs .Tabs-link.is-active::after { background: var(--jimi-feed-muted) !important; height: 2px; bottom: 8px; }
+      html.jim-iphone[data-theme] .ProfileMain-tabs .Tabs-meta { margin: 0; font-size: 12px; font-weight: 400; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .ProfileMain-header > :not(.ProfileMain-tabs) { position: static !important; flex: 0 0 auto; width: auto; background: var(--jimi-feed-bg) !important; }
+      html.jim-iphone[data-theme] .ProfileMain-header > :not(.ProfileMain-tabs)::before { display: none !important; }
+      html.jim-iphone[data-theme] :is(.ProfileHeader, .ProfileMain-header) svg { color: inherit !important; fill: currentColor !important; }
+      html.jim-iphone[data-theme] .ProfileMain-header button { background: transparent !important; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] #ProfileMain .ProfileMain-header button { background: transparent !important; color: var(--jimi-feed-muted) !important; }
+      html.jim-iphone[data-theme] #ProfileMain .ProfileMain-header button svg { color: var(--jimi-feed-muted) !important; fill: currentColor !important; }
+      html.jim-iphone[data-theme] .Profile-main .List-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 27px 16px; border: 0; }
+      html.jim-iphone[data-theme] .Profile-main .List-headerText { margin: 0; font-size: 17px; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .Profile-main .List-headerOptions { margin-left: auto; font-size: 14px; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .Profile-main .List-item:not(.jimi-answer-morph) {
+        margin: 0 12px 12px; padding: 15px !important; border: 0; border-radius: 18px;
+        box-shadow: var(--jimi-card-shadow); background: var(--jimi-feed-bg) !important; overflow: visible;
+      }
+      html.jim-iphone[data-theme] .Profile-main .List-itemMeta { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .Profile-main .ActivityItem-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; color: var(--jimi-feed-muted); }
+      html.jim-iphone[data-theme] .Profile-main .ActivityItem-metaTitle { color: inherit; }
+      html.jim-iphone[data-theme] .Profile-main .ContentItem-title { font-size: 20px; line-height: 1.4; overflow-wrap: anywhere; }
+      html.jim-iphone[data-theme] .Profile-main .RichContent.is-collapsed .RichContent-inner { max-height: none !important; }
+      html.jim-iphone[data-theme] .Profile-main :is(.Pagination, .EmptyState) { padding: 20px 15px; color: var(--jimi-feed-muted); background: transparent !important; }
+      html.jim-iphone[data-theme] .Profile-main .Pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+      html.jim-iphone[data-theme] .Profile-main .Pagination button { min-width: 44px; min-height: 44px; margin: 0; }
       ${hideSidebars ? `html.jim-iphone :is(.GlobalSideBar, .Topstory-sideBar, .Topstory-container > [data-za-detail-view-path-module="RightSideBar"], .Question-sideColumn,
         .SearchSideBar, .Profile-sideColumn, .CollectionsDetailPage-sideColumn, .Post-Row-Content-right) { display: none !important; }` : ""}
       ${hideOpenApp ? `html.jim-iphone :is(.OpenInAppButton, .OpenInAppBanner, .DownloadGuide,
@@ -1014,6 +1092,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     iPhoneAvatarObserver.observe(content);
     iPhoneAvatarTargets.add(content);
   };
+  var iPhoneFeedMetadataObserver;
   var syncIPhoneFeed = () => {
     if (!isIPhoneLayout || !IPHONE_PRESET.mobile.compactFeed) return;
     const root = document.querySelector('.Topstory-recommend');
@@ -1036,7 +1115,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       iPhoneAvatarObserver.unobserve(target);
       iPhoneAvatarTargets.delete(target);
     }
-    for (const content of document.querySelectorAll('.TopstoryItem .AnswerItem')) {
+    for (const content of document.querySelectorAll('.TopstoryItem .AnswerItem, .Profile-main .List-item .AnswerItem')) {
       const rich = content.querySelector(':scope > .RichContent');
       if (!rich?.classList.contains("is-collapsed") || !rich.querySelector('.ContentItem-more')) continue;
       const zop = parseJSONAttr(content.getAttribute("data-zop")) || {};
@@ -1044,10 +1123,10 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       const title = content.querySelector('.ContentItem-title a')?.textContent.trim();
       if (!title) continue;
       const author = iPhoneFeedAuthors.get(String(zop.itemId)) || {};
-      const authorName = zop.authorName || author.name || "";
+      const authorName = zop.authorName || author.name || content.querySelector('.AuthorInfo-name')?.textContent.trim() || "";
       let excerpt = content.querySelector('.RichContent-inner .RichText')?.textContent.replace(/\s+/g, " ").trim() || "";
       if (authorName && (excerpt.startsWith(authorName + "：") || excerpt.startsWith(authorName + ":"))) excerpt = excerpt.slice(authorName.length + 1).trim();
-      const votes = formatIPhoneFeedVotes(card.upvote_num);
+      const votes = formatIPhoneFeedVotes(card.upvote_num ?? content.querySelector('meta[itemprop="upvoteCount"]')?.content);
       const avatar = author.avatar_url || author.avatarUrl || content.querySelector('.AuthorInfo-avatar')?.src || "";
       let preview = content.querySelector(':scope > .jimi-feed-preview');
       if (!preview) {
@@ -1058,6 +1137,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         preview.innerHTML = '<span class="jimi-feed-title"></span><span class="jimi-feed-excerpt"></span><span class="jimi-feed-meta"><img class="jimi-feed-avatar" alt="" hidden><span class="jimi-feed-author"></span><span class="jimi-feed-votes"></span></span>';
         preview.onclick = () => content.querySelector('.RichContent.is-collapsed .ContentItem-more')?.click();
         content.prepend(preview);
+        // 主页的作者与计数可能在 React 接管后才写入；只观察原生资料属性，避免自触发。
+        iPhoneFeedMetadataObserver ||= new MutationObserver(syncIPhoneFeed);
+        iPhoneFeedMetadataObserver.observe(content, { attributes: true, attributeFilter: ["data-zop", "data-za-extra-module"] });
       }
       const signature = JSON.stringify([title, excerpt, authorName, votes, avatar]);
       if (preview.dataset.signature !== signature) {
@@ -1078,7 +1160,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         if (!image.hidden && image.getAttribute("src") !== avatar) image.src = avatar;
       }
       content.classList.add("jimi-feed-answer");
-      content.closest('.TopstoryItem').classList.add("jimi-feed-item");
+      const item = content.closest('.TopstoryItem, .Profile-main .List-item');
+      item.classList.add("jimi-feed-item");
+      if (item.closest('.Profile-main')) item.classList.add("jimi-profile-item");
       if (!avatar) observeIPhoneFeedAvatar(content);
     }
   };
@@ -1109,7 +1193,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (iPhoneAnswerClick) return;
     const button = event.target.closest?.('.ContentItem-more, button[data-zop-retract-question="true"]');
     const rich = button?.closest('.AnswerItem > .RichContent');
-    const item = rich?.closest('.TopstoryItem');
+    const item = rich?.closest('.TopstoryItem, .jimi-profile-item');
     if (!item) return;
     // 直接切换时让原生点击继续；同步重放同一按钮会被浏览器的 click 重入保护忽略。
     if (!item.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
@@ -1140,7 +1224,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         }
       });
     }
-    const item = rich.closest('.TopstoryItem');
+    const item = rich.closest('.TopstoryItem, .jimi-profile-item');
     // ponytail: 复用 Safari 原生 WAAPI；减少动态效果或不支持时直接切换，不加载动画库。
     if (!item?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || iPhoneAnswerMotion?.updating) {
       apply();
@@ -1157,7 +1241,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
     const opening = rich.classList.contains('is-collapsed');
     if (opening && iPhoneActiveAnswer && iPhoneActiveAnswer !== rich && !iPhoneActiveAnswer.classList.contains('is-collapsed')) {
-      const previous = iPhoneActiveAnswer.closest('.TopstoryItem')?.getBoundingClientRect();
+      const previous = iPhoneActiveAnswer.closest('.TopstoryItem, .jimi-profile-item')?.getBoundingClientRect();
       // 仍在屏幕内的旧回答先平滑收起；屏幕外的回答沿用切换时的直接收起。
       if (previous?.bottom > 0 && previous.top < innerHeight) {
         return collapseIPhoneAnswer(iPhoneActiveAnswer, item).then(() => changeIPhoneAnswer(rich, change));
@@ -1185,7 +1269,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       try {
         // 先淡出文字与底栏；保留真实内容节点，图片、评论和按钮均不复制。
         await animate(answer, [{ opacity: getComputedStyle(answer).opacity }, { opacity: 0 }], 100).finished.catch(() => {});
-        const before = new Map([...document.querySelectorAll('.TopstoryItem:has(.AnswerItem)')]
+        const before = new Map([...document.querySelectorAll(':is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem)')]
           .map(row => [row, row.getBoundingClientRect()]));
         const oldFrame = frame(item.getBoundingClientRect());
         root.classList.add('jimi-answer-changing');
@@ -1195,7 +1279,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         surface.setAttribute('aria-hidden', 'true');
         surface.style.setProperty('--jimi-surface-shadow', opening ? '0' : '1');
         Object.assign(surface.style, { top: `${oldFrame.top}px`, left: `${oldFrame.left}px`, width: `${oldFrame.width}px`, height: `${oldFrame.height}px` });
-        (item.closest('.Topstory') || document.body).append(surface);
+        (item.closest('.Topstory, .Profile-main') || document.body).append(surface);
         state.updating = true;
         apply();
         await Promise.resolve();
@@ -1280,7 +1364,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         if (!state.armed) continue;
         const above = rect.top < bounds.top;
         if (!above && rect.bottom <= bounds.bottom) continue;
-        const item = rich.closest('.TopstoryItem') || rich.closest('.AnswerItem');
+        const item = rich.closest('.TopstoryItem, .jimi-profile-item') || rich.closest('.AnswerItem');
         let anchor = item;
         if (above) {
           for (let next = item?.nextElementSibling; next; next = next.nextElementSibling) {

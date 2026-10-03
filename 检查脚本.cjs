@@ -443,7 +443,7 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   const motionAPI = load('iPhone Safari', 5, 402, 874, {
     documentElement: { classList: classes }, body: { append() { surfaces++; } },
     createElement: () => ({ style: { setProperty() {} }, setAttribute() {}, remove() { surfaces--; }, animate: motionRow.animate }),
-    querySelectorAll: selector => selector === '.TopstoryItem:has(.AnswerItem)' ? [motionRow] : []
+    querySelectorAll: selector => selector === ':is(.TopstoryItem, .jimi-profile-item):has(.AnswerItem)' ? [motionRow] : []
   }, { setTimeout, innerHeight: 874, getComputedStyle: () => ({ opacity: '1' }),
     window: { addEventListener() {}, matchMedia: () => ({ matches: reduced }) } });
   await Promise.all([
