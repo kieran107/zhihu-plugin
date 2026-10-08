@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.43
+// @version      1.44
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -925,7 +925,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
       html.jimi-readonly-comments .css-1aq8hf9 :is(.css-18ld3w0, .css-16zdamy) { padding-bottom: 72px !important; }
       /* 原生操作提示不遮挡阅读；按钮状态继续由知乎更新。 */
-      html.jim-iphone :is(.rv-toast, [class*="Toast_module_toast__"]) { display: none !important; }
+      html.jim-iphone :is(.Notification, .rv-toast, [class*="Toast_module_toast__"]) { display: none !important; }
       html.jim-iphone #JIMI_PREVIEW_IMAGE { background: var(--jimi-preview-bg); }
       html.jim-iphone .jimi-preview img { width: auto; height: auto; max-width: 100%; max-height: 90vh; max-height: 90dvh; object-fit: contain; }
       html.jim-iphone .jimi-preview video { max-width: 100%; max-height: 90vh; }
