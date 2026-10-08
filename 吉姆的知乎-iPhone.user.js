@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.42
+// @version      1.43
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -417,7 +417,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         colors.push(meta);
       }
       const themeColor = getComputedStyle(document.documentElement).getPropertyValue("--jimi-page-bg").trim() ||
-        (document.documentElement.getAttribute("data-theme") === "dark" ? "#242426" : "#faf9f5");
+        (document.documentElement.getAttribute("data-theme") === "dark" ? "#191a1c" : "#faf9f5");
       for (const meta of colors) if (meta.content !== themeColor) meta.content = themeColor;
     };
     // 只响应相关 meta，避免知乎每次插入样式都强制读取布局。
@@ -559,12 +559,12 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       }
       html.jim-iphone[data-theme="dark"] {
         color-scheme: dark;
-        --jimi-feed-bg: #242426; --jimi-feed-text: #ededed; --jimi-feed-muted: #a0a4aa; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-answer-text: #d0d2d6;
+        --jimi-feed-bg: #191a1c; --jimi-feed-text: #f1f2f4; --jimi-feed-muted: #adb2ba; --jimi-feed-line: #333; --jimi-pill-bg: #242424; --jimi-answer-text: #e5e7eb;
         --jimi-liked: #6aa6ff; --jimi-focus: #06f; --jimi-comment-open: #e4a080;
         --jimi-avatar-gap: #fff; --jimi-avatar-ring: #161616; --jimi-preview-bg: rgba(0, 0, 0, .94);
-        --jimi-feed-canvas: #030405; --jimi-grid-line: #aab4c53d; --jimi-imprint-ink: #737880;
-        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%23030405%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%23aab4c5%22%20stroke-opacity%3D%22.24%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
-        --jimi-bar-bg: #383835; --jimi-bar-text: #faf9f5; --jimi-bar-liked: #83b2f3; --jimi-bar-border: #e8e6dc33; --jimi-bar-shadow: 0 0 8px #000b, 0 0 24px #000d; --jimi-slot-bg: #141413; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
+        --jimi-feed-canvas: #4b4f55; --jimi-grid-line: #c5c8ce1f; --jimi-imprint-ink: #c5c8ce;
+        --jimi-canvas-top: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%2096%22%20preserveAspectRatio%3D%22none%22%3E%3Cpath%20fill%3D%22%234b4f55%22%20d%3D%22M0%200H400V96H0z%22%2F%3E%3Cpath%20d%3D%22M200%200L0%2096M200%200L20%2096M200%200L40%2096M200%200L60%2096M200%200L80%2096M200%200L100%2096M200%200L120%2096M200%200L140%2096M200%200L160%2096M200%200L180%2096M200%200L200%2096M200%200L220%2096M200%200L240%2096M200%200L260%2096M200%200L280%2096M200%200L300%2096M200%200L320%2096M200%200L340%2096M200%200L360%2096M200%200L380%2096M200%200L400%2096M0.00%2096.00H400.00M34.48%2079.45H365.52M58.82%2067.76H341.18M76.92%2059.08H323.08M90.91%2052.36H309.09M102.04%2047.02H297.96M111.11%2042.67H288.89M118.64%2039.05H281.36M125.00%2036.00H275.00M130.43%2033.39H269.57M135.14%2031.14H264.86M139.24%2029.16H260.76M142.86%2027.43H257.14M146.07%2025.89H253.93M149.19%2024.39H250.81M152.32%2022.89H247.68M155.44%2021.39H244.56M158.57%2019.89H241.43M161.69%2018.39H238.31M164.82%2016.89H235.18M167.94%2015.39H232.06M171.07%2013.89H228.93M174.19%2012.39H225.81M177.32%2010.89H222.68M180.44%209.39H219.56M183.57%207.89H216.43M186.69%206.39H213.31M189.82%204.89H210.18M192.94%203.39H207.06M196.07%201.89H203.93M199.19%200.39H200.81%22%20fill%3D%22none%22%20stroke%3D%22%23c5c8ce%22%20stroke-opacity%3D%22.12%22%20stroke-width%3D%22.75%22%20vector-effect%3D%22non-scaling-stroke%22%2F%3E%3C%2Fsvg%3E");
+        --jimi-bar-bg: #2e3034; --jimi-bar-text: #faf9f5; --jimi-bar-liked: #83b2f3; --jimi-bar-border: #e8e6dc33; --jimi-bar-shadow: 0 0 8px #000b, 0 0 24px #000d; --jimi-slot-bg: #101113; --jimi-slot-shadow: inset 0 8px 10px -3px #000b, inset 0 -7px 10px -3px #ffffff0d;
         --jimi-card-shadow: 0 2px 4px #0005, 0 8px 20px -4px #0008, inset 0 0 0 1px #ffffff0d;
         --jimi-card-focus-shadow: 0 4px 10px #0004, 0 18px 36px -8px #000a, inset 0 0 0 1px #ffffff14;
       }
