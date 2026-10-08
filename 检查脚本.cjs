@@ -42,6 +42,8 @@ assert.equal(JSON.parse(synced.source.match(/const IPHONE_PRESET = ([\s\S]*?);\n
 const html = source.match(/var INNER_HTML = `([^`]+)`;/)[1];
 assert.doesNotMatch(html, /id="(?:JIMI_DIALOG|JIMI_OPEN_CLOSE)"/);
 assert.match(html, /JIMI_PREVIEW_IMAGE/);
+assert.doesNotMatch(source, /JIMI_MESSAGE_BOX|JIMI_EXTRA_OUTPUT|var message =|var openExtra =|jimi-form-box-item/);
+
 assert.equal((source.match(/doFetchNotInterested\(\{/g) || []).length, 1, 'Only explicit user feedback may send a request');
 for (const [file, hash] of [
   ['知乎修改器-网页端.js', 'ca13bccd9f08b9d0f1b5b64238b5dd95fd98280ac0713d8b606fdf219263c31f'],
@@ -51,7 +53,7 @@ for (const [file, hash] of [
 }
 const boot = source.indexOf('  (function() {\n    if (needRedirect()) return;');
 assert.ok(boot > 0);
-const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, syncIPhoneAnswerIP, formatIPhoneAnswerIP, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, handleIPhoneLinkClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
+const library = source.slice(0, boot) + '\n globalThis.testAPI = { initHTML, myStorage, applyCodePreset, store, answerHasVideo, processingData2, fnAppendStyle, mySize, myBackground, appendHiddenStyle, isDark, onUseThemeDark, isIPhoneLayout, addNotInterestedItem, syncIPhoneCollapseButtons, syncIPhoneExpandedAnswers, updateItemAfterBlock, removeItemAfterBlock, syncIPhoneAnswerIP, formatIPhoneAnswerIP, syncIPhoneAnswerFocus, syncIPhoneAutoCollapse, collapseIPhoneAnswer, changeIPhoneAnswer, trackIPhoneAnswerMotion, trackIPhoneCommentAnswer, blockIPhoneAnswerTextClick, handleIPhoneLinkClick, getPreviewImageSrc, myPreview, cacheIPhoneFeedAuthors, iPhoneFeedAuthors, formatIPhoneFeedVotes, loadIPhoneFeedAvatar, iPhoneFeedBatch, syncIPhoneFeedBatch, shouldStopIPhoneFeedRequest };\n})();';
 function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock = {}, globals = {}) {
   const local = new Map();
   const gm = new Map();
@@ -136,6 +138,18 @@ function load(userAgent, maxTouchPoints, screenWidth, screenHeight, documentMock
   assert.equal((await api.myStorage.getConfig(true)).theme, preset.script.theme);
   assert.equal(api.applyCodePreset({ notInterestedList: 'bad' }).notInterestedList.length, preset.script.notInterestedList.length);
   assert.equal(api.applyCodePreset({ blockedUsers: [{ id: 'same', tags: ['a'] }, { id: 'same', tags: ['b'] }] }).blockedUsers[0].tags.join(','), 'a,b');
+  // Removing dead panel refreshes must preserve blocking persistence and tags.
+  await api.updateItemAfterBlock({ id: 'cleanup', name: 'first', tags: ['a'] }, 'local');
+  await api.updateItemAfterBlock({ id: 'cleanup', name: 'second', tags: ['b'] }, 'local');
+  let blockedConfig = await api.myStorage.getConfig();
+  assert.equal(blockedConfig.localBlockedUsers.find(user => user.id === 'cleanup').tags.join(','), 'a,b');
+  await api.updateItemAfterBlock({ id: 'cleanup', tags: ['a', 'b'] }, 'zhihu');
+  blockedConfig = await api.myStorage.getConfig();
+  assert.equal(blockedConfig.localBlockedUsers.some(user => user.id === 'cleanup'), false);
+  assert.equal(blockedConfig.blockedUsers.some(user => user.id === 'cleanup'), true);
+  await api.removeItemAfterBlock({ id: 'cleanup' }, 'zhihu');
+  assert.equal((await api.myStorage.getConfig()).blockedUsers.some(user => user.id === 'cleanup'), false);
+
   // Answer IP belongs below its date, without using author location or adding requests.
   let ipLine, ipAppends = 0;
   const nativeIP = { nodeType: 3, textContent: '・四川' };

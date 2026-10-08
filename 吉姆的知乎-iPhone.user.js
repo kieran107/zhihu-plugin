@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         吉姆的知乎 · iPhone Safari
 // @namespace    local.jim.zhihu.iphone
-// @version      1.41
+// @version      1.42
 // @homepageURL  https://github.com/kieran107/zhihu-plugin
 // @supportURL   https://github.com/kieran107/zhihu-plugin/issues
 // @updateURL    https://raw.githubusercontent.com/kieran107/zhihu-plugin/main/%E5%90%89%E5%A7%86%E7%9A%84%E7%9F%A5%E4%B9%8E-iPhone.meta.js
@@ -808,7 +808,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         .Modal-closeButton, .jimi-button) { min-height: 44px; touch-action: manipulation; }
       html.jim-iphone :is(input, textarea, [contenteditable="true"]) { font-size: 16px !important; }
       html.jim-iphone .Modal-wrapper { padding: 8px; box-sizing: border-box; }
-      html.jim-iphone :is(.Modal-wrapper .Modal, .css-1aq8hf9, #JIMI_EXTRA_OUTPUT_DIALOG) {
+      html.jim-iphone :is(.Modal-wrapper .Modal, .css-1aq8hf9) {
         width: calc(100vw - 16px) !important; min-width: 0 !important;
         max-width: calc(100vw - 16px) !important; max-height: 90vh; max-height: 90dvh;
         box-sizing: border-box;
@@ -924,7 +924,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"] svg { display: none; }
       html.jimi-readonly-comments .css-1aq8hf9 > button[aria-label="关闭"]::after { content: "收起评论"; }
       html.jimi-readonly-comments .css-1aq8hf9 :is(.css-18ld3w0, .css-16zdamy) { padding-bottom: 72px !important; }
-      html.jim-iphone .jimi-message { max-width: calc(100vw - 24px); height: auto; min-height: 44px; padding: 8px; box-sizing: border-box; }
+      /* 原生操作提示不遮挡阅读；按钮状态继续由知乎更新。 */
+      html.jim-iphone :is(.rv-toast, [class*="Toast_module_toast__"]) { display: none !important; }
       html.jim-iphone #JIMI_PREVIEW_IMAGE { background: var(--jimi-preview-bg); }
       html.jim-iphone .jimi-preview img { width: auto; height: auto; max-width: 100%; max-height: 90vh; max-height: 90dvh; object-fit: contain; }
       html.jim-iphone .jimi-preview video { max-width: 100%; max-height: 90vh; }
@@ -1702,7 +1703,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   var CLASS_TO_QUESTION = "jimi-to-question";
   var CLASS_TIME_ITEM = "jimi-list-item-time";
   var CLASS_LISTENED = "jimi-listened";
-  var ID_EXTRA_DIALOG = "JIMI_EXTRA_OUTPUT_DIALOG";
   var CLASS_ZHIHU_COMMENT_DIALOG = "css-1aq8hf9";
   var EXTRA_CLASS_HTML = {
     "zhuanlan.zhihu.com": "zhuanlan",
@@ -1730,7 +1730,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     });
     return [...map.values()];
   };
-  var getBlockedUsersByType = (config, listType) => config[BLOCKED_USER_LIST_CONFIG_KEY[listType]] || [];
   var getAllBlockedUsers = (config) => mergeBlockedUsers([...config.blockedUsers || [], ...config.localBlockedUsers || []]);
   var findBlockedUserWithType = (config, id) => {
     const zhihuUser = (config.blockedUsers || []).find((item) => item.id === id);
@@ -1748,9 +1747,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     }
   };
 
-  var updateItemAfterBlock = async (userInfo, listType = BLOCKED_USER_LIST_TYPE.zhihu, options = {}) => {
+  var updateItemAfterBlock = async (userInfo, listType = BLOCKED_USER_LIST_TYPE.zhihu) => {
     const config = await myStorage.getConfig();
-    const { openTagChooseAfterBlockedUser } = config;
     const listKey = BLOCKED_USER_LIST_CONFIG_KEY[listType];
     const otherListKey = listType === BLOCKED_USER_LIST_TYPE.zhihu ? BLOCKED_USER_LIST_CONFIG_KEY.local : BLOCKED_USER_LIST_CONFIG_KEY.zhihu;
     const prevList = config[listKey] || [];
@@ -1761,11 +1759,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       [listKey]: [nextUser, ...prevList.filter((item) => item.id !== userInfo.id)],
       [otherListKey]: (config[otherListKey] || []).filter((item) => item.id !== userInfo.id)
     });
-    await initHTMLBlockedUsers(document.body);
-    if (options.openTagChoose !== false && openTagChooseAfterBlockedUser) {
-      const nodeUserItem = dom(`#${listType === BLOCKED_USER_LIST_TYPE.zhihu ? ID_BLOCK_LIST : ID_LOCAL_BLOCK_LIST} .jimi-black-id-${userInfo.id}`);
-      nodeUserItem && chooseBlockedUserTags(nodeUserItem, false);
-    }
   };
   var removeItemAfterBlock = async (userInfo, listType = BLOCKED_USER_LIST_TYPE.zhihu) => {
     const config = await myStorage.getConfig();
@@ -1776,10 +1769,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       blockedUsers.splice(itemIndex, 1);
       await myStorage.updateConfigItem(listKey, blockedUsers);
     }
-    initHTMLBlockedUsers(document.body);
   };
   var getXSRFToken = () => document.cookie.match(/(?<=_xsrf=)[\w-]+(?=;)/)?.[0] || "";
-  var addBlockUser = (userInfo, options = {}) => {
+  var addBlockUser = (userInfo) => {
     const { name, urlToken } = userInfo;
     return new Promise((resolve) => {
       const headers = store.getFetchHeaders();
@@ -1792,25 +1784,25 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
         credentials: "include"
       }).then(async (res) => {
         if (res.ok) {
-          await updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.zhihu, options);
+          await updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.zhihu);
           resolve(BLOCKED_USER_LIST_TYPE.zhihu);
           return;
         }
         if (await isZhihuBlockListFullResponse(res)) {
-          await updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.local, options);
-          message("知乎黑名单已满，已添加至本地黑名单");
+          await updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.local);
+          fnLog("知乎黑名单已满，已添加至本地黑名单");
           resolve(BLOCKED_USER_LIST_TYPE.local);
           return;
         }
-        message(`屏蔽用户失败：${name}`);
+        fnLog(`屏蔽用户失败：${name}`);
         resolve(void 0);
       }).catch(() => {
-        message(`屏蔽用户失败：${name}`);
+        fnLog(`屏蔽用户失败：${name}`);
         resolve(void 0);
       });
     });
   };
-  var removeBlockUser = (info, needConfirm = true) => {
+  var removeBlockUser = (info) => {
     return new Promise((resolve) => {
       const { urlToken } = info;
       const headers = store.getFetchHeaders();
@@ -1848,7 +1840,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
               updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.zhihu);
             } else if (await isZhihuBlockListFullResponse(res)) {
               updateItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.local);
-              message("知乎黑名单已满，已添加至本地黑名单");
+              fnLog("知乎黑名单已满，已添加至本地黑名单");
             }
           }
           opt.method === "DELETE" && res.ok && removeItemAfterBlock(userInfo, BLOCKED_USER_LIST_TYPE.zhihu);
@@ -2014,197 +2006,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     );
   };
 
-  var openExtra = (type, needCover = true) => {
-    const extra = domById(ID_EXTRA_DIALOG);
-    const extraCover = domById("JIMI_EXTRA_OUTPUT_COVER");
-    const elementsTypes = extra.children;
-    for (let i = 0, len = elementsTypes.length; i < len; i++) {
-      const item = elementsTypes[i];
-      item.style.display = item.dataset.type === type ? "block" : "none";
-    }
-    extra.style.display = "block";
-    needCover && (extraCover.style.display = "block");
-    extra.dataset.status = "open";
-  };
-  var closeExtra = () => {
-    const extra = domById(ID_EXTRA_DIALOG);
-    extra.dataset.status = "close";
-    extra.style.display = "none";
-    domById("JIMI_EXTRA_OUTPUT_COVER").style.display = "none";
-  };
-
-  var CLASS_BLACK_ITEM_MORE = "jimi-black-item-more";
-  var CLASS_BLACK_ITEM_ACTION = "jimi-black-item-action";
-  var ID_BLOCKED_USER_MENU = "JIMI_BLOCKED_USER_MENU";
-
-  var ID_BLOCK_LIST = "JIMI_BLOCKED_USERS";
-  var ID_LOCAL_BLOCK_LIST = "JIMI_LOCAL_BLOCKED_USERS";
-  var CLASS_BLACK_TAG = "jimi-black-tag";
-
-  var BLOCKED_USER_LIST_ID = {
-    zhihu: ID_BLOCK_LIST,
-    local: ID_LOCAL_BLOCK_LIST
-  };
-
-  var escapeHTML = (value = "") => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  var encodeBlockedUserInfo = (info) => encodeURIComponent(JSON.stringify(info));
-  var getBlockedUserInfoFromItem = (item) => {
-    try {
-      return item.dataset.info ? JSON.parse(decodeURIComponent(item.dataset.info)) : { id: "", name: "", urlToken: "" };
-    } catch {
-      return { id: "", name: "", urlToken: "" };
-    }
-  };
-  var getBlockedUserListTypeFromItem = (item) => item.dataset.listType === BLOCKED_USER_LIST_TYPE.local ? BLOCKED_USER_LIST_TYPE.local : BLOCKED_USER_LIST_TYPE.zhihu;
-  var blackItemContent = ({ id, name, urlToken, tags = [] }, listType = BLOCKED_USER_LIST_TYPE.zhihu) => {
-    return `<a href="https://www.zhihu.com/people/${escapeHTML(urlToken || id)}" target="_blank">${escapeHTML(name)}</a>` + tags.map((tag) => `<span class="jimi-in-blocked-user-tag">${escapeHTML(tag)}</span>`).join("") + `<i class="${CLASS_BLACK_ITEM_MORE}">···</i>`;
-  };
-
-  var initHTMLBlockedUsers = async (domMain) => {
-    if (!dom("#JIMI_BLOCKED_NUMBER", domMain)) return;
-    removeBlockedUserMenu();
-    const { blockedUsers = [], localBlockedUsers = [] } = await myStorage.getConfig();
-    dom("#JIMI_BLOCKED_NUMBER", domMain).innerText = blockedUsers.length ? `知乎黑名单数量：${blockedUsers.length}` : "";
-    dom("#JIMI_LOCAL_BLOCKED_NUMBER", domMain).innerText = localBlockedUsers.length ? `本地黑名单数量：${localBlockedUsers.length}` : "";
-    renderBlockedUserList(domMain, blockedUsers, BLOCKED_USER_LIST_TYPE.zhihu);
-    renderBlockedUserList(domMain, localBlockedUsers, BLOCKED_USER_LIST_TYPE.local);
-  };
-  var renderBlockedUserList = (domMain, list, listType) => {
-    const nodeBlockedUsers = dom(`#${BLOCKED_USER_LIST_ID[listType]}`, domMain);
-    nodeBlockedUsers.innerHTML = list.map((info) => createBlockedUserItemHTML(info, listType)).join("");
-    nodeBlockedUsers.onclick = (event) => onBlockedUserListClick(event, listType);
-  };
-  var createBlockedUserItemHTML = (info, listType) => `<div class="jimi-black-item jimi-black-id-${escapeHTML(info.id)}" data-list-type="${listType}" data-info="${encodeBlockedUserInfo(info)}">${blackItemContent(
-    info,
-    listType
-  )}</div>`;
-  var onBlockedUserListClick = async (event, defaultListType) => {
-    const target = event.target;
-    const item = target.closest(".jimi-black-item");
-    if (!item) return;
-    if (target.classList.contains(CLASS_BLACK_ITEM_MORE)) {
-      const listType = item.dataset.listType ? getBlockedUserListTypeFromItem(item) : defaultListType;
-      openBlockedUserMenu(target, item, listType);
-      return;
-    }
-  };
-  var onBlockedUserAction = async (action, item, listType) => {
-    const info = getBlockedUserInfoFromItem(item);
-    if (!info.id) return;
-    if (action === "tags") {
-      chooseBlockedUserTags(item);
-      return;
-    }
-    if (action === "move") {
-      if (listType === BLOCKED_USER_LIST_TYPE.zhihu) {
-        await moveBlockedUserToLocal(info);
-      } else {
-        const movedType = await addBlockUser(info, { openTagChoose: false });
-        movedType === BLOCKED_USER_LIST_TYPE.zhihu && message("已移动至知乎黑名单");
-      }
-      return;
-    }
-    if (action === "remove") {
-      if (listType === BLOCKED_USER_LIST_TYPE.zhihu) {
-        removeBlockUser(info);
-      } else {
-        await removeLocalBlockedUser(info);
-      }
-    }
-  };
-  var removeBlockedUserMenu = () => {
-    domById(ID_BLOCKED_USER_MENU)?.remove();
-  };
-  var openBlockedUserMenu = (button, item, listType) => {
-    removeBlockedUserMenu();
-    const moveText = listType === BLOCKED_USER_LIST_TYPE.zhihu ? "移动至本地黑名单" : "移动至知乎黑名单";
-    const nodeMenu = domC("div", {
-      id: ID_BLOCKED_USER_MENU,
-      className: "jimi-black-item-menu",
-      innerHTML: `<span class="${CLASS_BLACK_ITEM_ACTION}" data-action="tags">设置标签</span><span class="${CLASS_BLACK_ITEM_ACTION}" data-action="move">${moveText}</span><span class="${CLASS_BLACK_ITEM_ACTION}" data-action="remove">从黑名单移除</span>`
-    });
-    nodeMenu.onclick = async (event) => {
-      const actionNode = event.target.closest(`.${CLASS_BLACK_ITEM_ACTION}`);
-      if (!actionNode || !actionNode.dataset.action) return;
-      removeBlockedUserMenu();
-      await onBlockedUserAction(actionNode.dataset.action, item, listType);
-    };
-    document.body.appendChild(nodeMenu);
-    const rect = button.getBoundingClientRect();
-    const menuRect = nodeMenu.getBoundingClientRect();
-    let left = Math.min(Math.max(rect.left, 8), window.innerWidth - menuRect.width - 8);
-    let top = rect.bottom + 6;
-    if (top + menuRect.height > window.innerHeight - 8) {
-      top = rect.top - menuRect.height - 6;
-    }
-    nodeMenu.style.left = `${left}px`;
-    nodeMenu.style.top = `${Math.max(top, 8)}px`;
-    setTimeout(() => {
-      document.addEventListener(
-        "click",
-        (event) => {
-          const target = event.target;
-          if (!target.closest(`#${ID_BLOCKED_USER_MENU}`) && !target.classList.contains(CLASS_BLACK_ITEM_MORE)) {
-            removeBlockedUserMenu();
-          }
-        },
-        { once: true }
-      );
-    });
-  };
-  var removeLocalBlockedUser = async (info) => {
-    const config = await myStorage.getConfig();
-    await myStorage.updateConfig({
-      ...config,
-      localBlockedUsers: (config.localBlockedUsers || []).filter((item) => item.id !== info.id)
-    });
-    initHTMLBlockedUsers(document.body);
-  };
-  var moveBlockedUserToLocal = async (info) => {
-    await removeBlockUser(info, false);
-    const config = await myStorage.getConfig();
-    const localBlockedUsers = config.localBlockedUsers || [];
-    const localUser = localBlockedUsers.find((item) => item.id === info.id);
-    await myStorage.updateConfig({
-      ...config,
-      localBlockedUsers: [mergeBlockedUser(localUser, info), ...localBlockedUsers.filter((item) => item.id !== info.id)]
-    });
-    initHTMLBlockedUsers(document.body);
-    message("已移动至本地黑名单");
-  };
-  var chooseBlockedUserTags = async (item, needCover = true) => {
-    const info = getBlockedUserInfoFromItem(item);
-    const listType = getBlockedUserListTypeFromItem(item);
-    openExtra("chooseBlockedUserTags", needCover);
-    const config = await myStorage.getConfig();
-    const { blockedUsersTags = [] } = config;
-    const blockedUsers = getBlockedUsersByType(config, listType);
-    const currentTags = info.tags || [];
-    dom('[data-type="chooseBlockedUserTags"] .jimi-title').innerText = `选择用户标签：${info.name}`;
-    const boxTags = dom(".jimi-choose-blocked-user-tags");
-    boxTags.innerHTML = blockedUsersTags.map((i) => `<span data-type="blockedUserTag" data-name="${escapeHTML(i)}" data-choose="${currentTags.includes(i)}">${escapeHTML(i)}</span>`).join("");
-    boxTags.onclick = (event) => {
-      const target = event.target;
-      if (target.dataset.type === "blockedUserTag") {
-        target.dataset.choose = target.dataset.choose === "true" ? "false" : "true";
-      }
-    };
-    dom('[name="choose-blocked-user-tags-finish"]').onclick = async () => {
-      const chooseTags = [...dom(".jimi-choose-blocked-user-tags").children].filter((i) => i.dataset.choose === "true").map((i) => i.dataset.name);
-      info.tags = chooseTags;
-      blockedUsers.forEach((i) => {
-        if (i.id === info.id) {
-          i.tags = chooseTags;
-          info.name = i.name;
-        }
-      });
-      item.innerHTML = blackItemContent(info, listType);
-      item.dataset.info = encodeBlockedUserInfo(info);
-      await myStorage.updateConfigItem(BLOCKED_USER_LIST_CONFIG_KEY[listType], blockedUsers);
-      closeExtra();
-    };
-  };
-
   var CLASS_BLOCK_USER_BOX = "jimi-block-user-box";
   var CLASS_BTN_ADD_BLOCKED = "jimi-block-add-blocked";
   var CLASS_BTN_REMOVE_BLOCKED = "jimi-block-remove-blocked";
@@ -2270,7 +2071,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       item.classList.add(CLASS_CAN_COPY);
       item.oncopy = (event) => {
         eventCopy(event);
-        message("已复制内容，若有禁止转载提示可无视");
         return true;
       };
     });
@@ -2340,7 +2140,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       const link = metaUrl.getAttribute("content") || "";
       if (link) {
         copy(link);
-        message("链接复制成功");
         return;
       }
     };
@@ -2353,8 +2152,8 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       await myStorage.updateConfigItem("notInterestedList", [name, ...notInterestedList]);
     }
   };
-  var INNER_HTML = `<div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_IMAGE"><div><img src=""></div></div><div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_VIDEO"><div><video src="" autoplay loop></video></div></div><iframe class="jimi-pdf-box-content" style="display: none"></iframe><div id="JIMI_MESSAGE_BOX"></div><div id="JIMI_EXTRA_OUTPUT_COVER" style="display: none"></div><div id="JIMI_EXTRA_OUTPUT_DIALOG" style="display: none" data-status="close"><div data-type="chooseBlockedUserTags"><div class="jimi-title">选择标签</div><div class="jimi-choose-blocked-user-tags"></div><div style="padding: 0 14px 6px"><input name="inputCreateNewTag" type="text" placeholder="添加新的标签，输入后回车添加（不区分大小写）" style="width: 300px"></div><div class="jimi-extra-footer"><button class="jimi-button" name="choose-blocked-user-tags-finish">完成</button></div></div><div data-type="changeBlockedUserTagName"><div class="jimi-title">修改标签名</div><div class="jimi-change-blocked-user-tag-name"><input type="text" name="blocked-user-tag-name"></div><div class="jimi-extra-footer"><button class="jimi-button" name="confirm-change-blocked-user-tag-name">修改</button> <button class="jimi-button" name="cancel-change-blocked-user-tag-name">取消</button></div></div></div>`;
-  var INNER_CSS = `.marginTB8{margin:8px 0}.PositionCenter{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%)}.CommonTransition{transition-property:transform;transition-duration:500ms;transition-timing-function:cubic-bezier(.2, 0, 0, 1)}[theme-light='1'] .jimi-black-item a:hover,[theme-light='1'] .jimi-black-item-action:hover,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff3b30 !important}[theme-light='1'] .jimi-in-blocked-user-tag,[theme-light='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff3b30;color:#ff3b30;background:rgba(255,59,48,0.1)}[theme-light='2'] .jimi-black-item a:hover,[theme-light='2'] .jimi-black-item-action:hover,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#a05a00 !important}[theme-light='2'] .jimi-in-blocked-user-tag,[theme-light='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#a05a00;color:#a05a00;background:rgba(160,90,0,0.1)}[theme-light='3'] .jimi-black-item a:hover,[theme-light='3'] .jimi-black-item-action:hover,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#007d1b !important}[theme-light='3'] .jimi-in-blocked-user-tag,[theme-light='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#007d1b;color:#007d1b;background:rgba(0,125,27,0.1)}[theme-light='4'] .jimi-black-item a:hover,[theme-light='4'] .jimi-black-item-action:hover,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#8e8e93 !important}[theme-light='4'] .jimi-in-blocked-user-tag,[theme-light='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#8e8e93;color:#8e8e93;background:rgba(142,142,147,0.1)}[theme-light='5'] .jimi-black-item a:hover,[theme-light='5'] .jimi-black-item-action:hover,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#af52de !important}[theme-light='5'] .jimi-in-blocked-user-tag,[theme-light='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#af52de;color:#af52de;background:rgba(175,82,222,0.1)}[theme-light='6'] .jimi-black-item a:hover,[theme-light='6'] .jimi-black-item-action:hover,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='6'] .jimi-in-blocked-user-tag,[theme-light='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-light='7'] .jimi-black-item a:hover,[theme-light='7'] .jimi-black-item-action:hover,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover{color:#ff9500 !important}[theme-light='7'] .jimi-in-blocked-user-tag,[theme-light='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#ff9500;color:#ff9500;background:rgba(255,179,64,0.1)}[theme-dark='0'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='1'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='2'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='3'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='4'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='7'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='0'] .jimi-black-item,[theme-dark='1'] .jimi-black-item,[theme-dark='2'] .jimi-black-item,[theme-dark='3'] .jimi-black-item,[theme-dark='4'] .jimi-black-item,[theme-dark='7'] .jimi-black-item,[theme-dark='0'] .jimi-blocked-users-tag,[theme-dark='1'] .jimi-blocked-users-tag,[theme-dark='2'] .jimi-blocked-users-tag,[theme-dark='3'] .jimi-blocked-users-tag,[theme-dark='4'] .jimi-blocked-users-tag,[theme-dark='7'] .jimi-blocked-users-tag,[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='0'] #JIMI_HIDDEN .jimi-title,[theme-dark='1'] #JIMI_HIDDEN .jimi-title,[theme-dark='2'] #JIMI_HIDDEN .jimi-title,[theme-dark='3'] #JIMI_HIDDEN .jimi-title,[theme-dark='4'] #JIMI_HIDDEN .jimi-title,[theme-dark='7'] #JIMI_HIDDEN .jimi-title,[theme-dark='0'] #JIMI_FILTER .jimi-title,[theme-dark='1'] #JIMI_FILTER .jimi-title,[theme-dark='2'] #JIMI_FILTER .jimi-title,[theme-dark='3'] #JIMI_FILTER .jimi-title,[theme-dark='4'] #JIMI_FILTER .jimi-title,[theme-dark='7'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#175ac0}[theme-dark='0'] .jimi-black-item a:hover,[theme-dark='1'] .jimi-black-item a:hover,[theme-dark='2'] .jimi-black-item a:hover,[theme-dark='3'] .jimi-black-item a:hover,[theme-dark='4'] .jimi-black-item a:hover,[theme-dark='7'] .jimi-black-item a:hover,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='0'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='1'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='2'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='3'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='4'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='7'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='0'] .jimi-in-blocked-user-tag,[theme-dark='1'] .jimi-in-blocked-user-tag,[theme-dark='2'] .jimi-in-blocked-user-tag,[theme-dark='3'] .jimi-in-blocked-user-tag,[theme-dark='4'] .jimi-in-blocked-user-tag,[theme-dark='7'] .jimi-in-blocked-user-tag{color:#175ac0 !important}[theme-dark='0'] .key-shadow,[theme-dark='1'] .key-shadow,[theme-dark='2'] .key-shadow,[theme-dark='3'] .key-shadow,[theme-dark='4'] .key-shadow,[theme-dark='7'] .key-shadow{background:#383534}[theme-dark='0'] .jimi-button:hover,[theme-dark='1'] .jimi-button:hover,[theme-dark='2'] .jimi-button:hover,[theme-dark='3'] .jimi-button:hover,[theme-dark='4'] .jimi-button:hover,[theme-dark='7'] .jimi-button:hover{color:#62605e}[theme-dark='5'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='5'] .jimi-black-item,[theme-dark='5'] .jimi-blocked-users-tag,[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='5'] #JIMI_HIDDEN .jimi-title,[theme-dark='5'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='5'] .jimi-in-blocked-user-tag,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#570d0d}[theme-dark='5'] .jimi-black-item a:hover,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='5'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='5'] .jimi-in-blocked-user-tag{color:#570d0d !important}[theme-dark='5'] .key-shadow{background:#383534}[theme-dark='5'] .jimi-button:hover{color:#62605e}[theme-dark='6'] #JIMI_EXTRA_OUTPUT_DIALOG,[theme-dark='6'] .jimi-black-item,[theme-dark='6'] .jimi-blocked-users-tag,[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{background:#504e4e}[theme-dark='6'] #JIMI_HIDDEN .jimi-title,[theme-dark='6'] #JIMI_FILTER .jimi-title{background:#2f2c2b}[theme-dark='6'] .jimi-in-blocked-user-tag,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true']{border-color:#093333}[theme-dark='6'] .jimi-black-item a:hover,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span:hover,[theme-dark='6'] [data-type='chooseBlockedUserTags'] .jimi-choose-blocked-user-tags>span[data-choose='true'],[theme-dark='6'] .jimi-in-blocked-user-tag{color:#093333 !important}[theme-dark='6'] .key-shadow{background:#383534}[theme-dark='6'] .jimi-button:hover{color:#62605e}.jimi-button{outline:none;position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;user-select:none;touch-action:manipulation;font-size:13px;height:24px;padding:0px 8px;border-radius:4px;border:1px solid transparent;background-color:#fff;border-color:rgba(150,162,170,0.4);font-weight:400;box-sizing:border-box}.jimi-button:hover{font-weight:600;background:#eeeeee}.jimi-button:active{background:#e0e0e0;font-weight:400}.jimi-button.jimi-button-primary{background:#007aff;color:#fff;border-color:transparent}.jimi-button.jimi-button-primary:hover{background:#0040dd}.jimi-button.jimi-button-primary:active{background:#007aff}.jimi-button-red{color:#ff3b30 !important;border:1px solid #ff3b30 !important}.jimi-button-red:hover{color:#ff453a !important;border:1px solid #ff453a !important}.jimi-button:disabled{border-color:#d0d0d0;background-color:rgba(0,0,0,0.08);color:#b0b0b0;cursor:not-allowed}.Profile-mainColumn,.Collections-mainColumn,.CollectionsDetailPage-mainColumn{flex:1}#root .css-1liaddi{margin-right:0}.ContentItem-title div{display:inline}.css-1acwmmj:empty{display:none !important}.css-hr0k1l::after{content:'点击键盘左、右按键切换图片';position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff}.HotLanding-contentItemCount.HotLanding-contentItemCountWithoutSub{margin-top:12px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']{position:fixed;bottom:50px;background:#fff;padding:6px 12px;box-shadow:0 2px 8px #c9c9c9,0 -2px 8px #ffffff;border-radius:8px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:hover{background:#fff;color:#007aff !important;font-weight:600}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:active{font-weight:200 !important}.Topstory-container,.css-knqde,.Search-container{width:fit-content !important}.QuestionPage .Question-mainColumn,.QuestionHeader-main{flex:1}.QuestionPage{padding:0}.QuestionPage .List-item{border-bottom:1px dashed #ddd}.QuestionPage .Question-mainColumn{width:initial}.Post-Row-Content .Post-Row-Content-right{width:auto}.QuestionHeader{min-width:auto}.QuestionHeader .QuestionHeader-content{margin:0 auto;padding:0;max-width:initial !important}.GifPlayer.isPlaying img{cursor:pointer !important}.AppHeader-inner{margin:0 auto !important;padding:0 !important;min-width:min-content !important;width:fit-content !important}.zhuanlan .Post-Row-Content-left{flex:1}.zhuanlan .Post-Row-Content-right{margin-left:10px}.zhuanlan .css-1pariuy,.zhuanlan .css-44kk6u{max-width:none}.zhuanlan .css-9w3zhd,.zhuanlan .css-12tmx22,.zhuanlan .css-1bcbfml{width:auto}.Topstory-content>div{width:auto !important}#JIMI_EXTRA_OUTPUT_DIALOG input[type='text'],#JIMI_EXTRA_OUTPUT_DIALOG input[type='number'],#JIMI_EXTRA_OUTPUT_DIALOG textarea{box-sizing:border-box;margin:0;padding:1px 4px;font-size:13px;line-height:1.5;list-style:none;position:relative;display:inline-block;min-width:0;border:1px solid rgba(150,162,170,0.4);border-radius:4px;transition:all .2s;background:transparent}#JIMI_EXTRA_OUTPUT_DIALOG label{cursor:pointer;transition:all .2s}#JIMI_EXTRA_OUTPUT_DIALOG label:hover{color:#007aff !important}#JIMI_EXTRA_OUTPUT_DIALOG label .jimi-i[type='checkbox']~div{margin-left:8px;display:inline-block}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar{width:8px;height:8px;background:transparent}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-track{border-radius:0}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb{background:#bbb;transition:all .2s;border-radius:8px}#JIMI_EXTRA_OUTPUT_DIALOG ::-webkit-scrollbar-thumb:hover{background-color:rgba(95,95,95,0.7)}#JIMI_EXTRA_OUTPUT_DIALOG a{transition:all .2s;text-decoration:none}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-button{min-width:68px}.jimi-default-bottom a,.jimi-config-buttons a,.jimi-default-bottom button,.jimi-config-buttons button{margin-left:8px;width:100px}#JIMI_LEFT_BUTTONS{margin:8px 0 0 8px}#JIMI_LEFT_BUTTONS button{height:22px;border-radius:4px;padding:0;border:0;font-size:12px;color:#fff;width:70px}#JIMI_LEFT_BUTTONS [name='dialogClose']{background:#fe6059}#JIMI_LEFT_BUTTONS [name='dialogClose']:hover{background:#d70015;color:#fff !important;font-weight:600}#JIMI_LEFT_BUTTONS [name='dialogBig']{background:#27c93f}#JIMI_LEFT_BUTTONS [name='dialogBig']:hover{background:#007d1b;color:#fff !important;font-weight:600}.gear{width:24px;height:24px;position:relative;border-radius:50%;box-sizing:border-box;border:6px solid #8e8e93;background:transparent}.gear_line_1,.gear_line_2,.gear_line_3,.gear_line_4{position:absolute;box-sizing:border-box;width:30px;height:6px;border-radius:2px;border-left:6px solid #8e8e93;border-right:6px solid #8e8e93;left:50%;top:50%;transform:translate(-50%, -50%)}.gear_line_2{transform:translate(-50%, -50%) rotate(45deg)}.gear_line_3{transform:translate(-50%, -50%) rotate(90deg)}.gear_line_4{transform:translate(-50%, -50%) rotate(135deg)}#JIMI_EXTRA_OUTPUT_COVER{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);width:800px;height:600px;background:rgba(0,0,0,0.4);z-index:203;border-radius:8px}#JIMI_EXTRA_OUTPUT_DIALOG{position:fixed;left:50%;top:50%;transform:translate(-50%, -50%);z-index:204;background:#ededec;border-radius:8px;overflow:hidden;min-width:420px;border:1px solid rgba(142,142,147,0.1);box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer{text-align:right;padding:14px;border-top:1px solid rgba(142,142,147,0.1)}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-extra-footer button{margin-left:12px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-title{padding-left:14px;height:auto;font-size:16px}#JIMI_EXTRA_OUTPUT_DIALOG>div{padding-top:4px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name{width:420px;padding:0 14px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-change-blocked-user-tag-name input[name='blocked-user-tag-name']{width:100%}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags{width:600px;padding:6px 6px 6px 14px}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span{cursor:pointer;display:inline-block;border-radius:6px;margin:0 8px 8px 0;border:1px solid rgba(150,162,170,0.4);padding:0 8px;background:#fff}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span:hover{background:rgba(77,66,86,0.08);color:#007aff !important;font-weight:600}#JIMI_EXTRA_OUTPUT_DIALOG .jimi-choose-blocked-user-tags>span[data-choose='true']{color:#007aff;border-color:#007aff;background:rgba(0,122,255,0.1)}.jimi-zhida{color:#09408e;margin:0 2px}.jimi-zhida span{font-size:10px;display:inline-block;vertical-align:top;height:15px;line-height:15px}#JIMI_HIDDEN,#JIMI_VERSION,#JIMI_FILTER{padding-top:0 !important}#JIMI_HIDDEN .jimi-title,#JIMI_FILTER .jimi-title{position:sticky;top:0;margin:0 -18px;padding:0 18px 0 28px;background:#ededec;z-index:1}#JIMI_NOT_INTERESTED_LIST>div{display:block;line-height:24px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item{cursor:pointer;margin-left:6px}#JIMI_NOT_INTERESTED_LIST>div .jimi-remove-not-interested-item:hover{color:#007aff}.jimi-radio-group{display:flex}.jimi-radio-group label{cursor:pointer;position:relative;margin:0 !important}.jimi-radio-group label div{box-sizing:border-box;padding:0 8px;height:24px;display:flex;align-items:center;justify-content:center;border-top:1px solid rgba(150,162,170,0.4);border-bottom:1px solid rgba(150,162,170,0.4);position:relative}.jimi-radio-group label div::after{content:'';position:absolute;height:100%;width:1px;background:rgba(150,162,170,0.4);right:0;top:0}.jimi-radio-group label:first-of-type div{border-radius:8px 0 0 8px;border-left:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:first-of-type div::before{display:none}.jimi-radio-group label:last-of-type div{border-radius:0 8px 8px 0;border-right:1px solid rgba(150,162,170,0.4)}.jimi-radio-group label:last-of-type div::after{display:none}.jimi-radio-group label:hover div{background:rgba(0,122,255,0.1)}.jimi-radio-group input{visibility:hidden;position:absolute}.jimi-radio-group input:checked+div{background:#007aff;color:#fff;border-color:#007aff;z-index:1}.jimi-radio-group input:checked+div::after{background:#007aff;z-index:1}.jimi-radio-group input:checked+div::before{content:'';position:absolute;height:100%;width:1px;background:#007aff;left:0;top:0;z-index:1}.jimi-checkbox-group label{display:inline-flex !important;padding-right:12px}.jimi-checkbox-group label div{margin-right:12px}.jimi-checkbox-group label::after{content:'';height:12px;width:1px;background:rgba(150,162,170,0.4)}.jimi-checkbox-group label:last-of-type::after{display:none}.jimi-form-box-item{display:flex;padding:8px 12px;min-height:24px;position:relative}.jimi-form-box-item>div:first-of-type{flex:1;line-height:24px;word-break:keep-all;padding-right:12px}.jimi-form-box-item>div:nth-child(2){display:flex;flex-wrap:wrap;align-items:center}.jimi-form-box-item::after{content:'';position:absolute;background:#e0e0df;height:1px;width:96%;bottom:0;left:50%;transform:translateX(-50%)}.jimi-form-box-item:last-of-type::after{display:none}.jimi-form-box-item-vertical{display:block}.jimi-form-box-item-vertical>div:nth-child(2){display:block;padding-top:4px;font-size:12px;color:#999}.jimi-title{font-weight:bold;font-size:13px;display:flex;align-items:center;height:42px;line-height:42px;padding-left:10px}.jimi-title>span{font-size:12px;color:#999;padding-left:8px}.jimi-title>span b{color:#ff3b30}.jimi-fetch-intercept .jimi-need-fetch{display:none}.jimi-fetch-intercept.jimi-fetch-intercept-close{color:#b0b0b0 !important;cursor:not-allowed !important;text-decoration:line-through}.jimi-fetch-intercept.jimi-fetch-intercept-close span.jimi-need-fetch{display:inline}.jimi-fetch-intercept.jimi-fetch-intercept-close div.jimi-need-fetch{display:block}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-more,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item-action{cursor:not-allowed !important}.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-more:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item .jimi-black-item-action:hover,.jimi-fetch-intercept.jimi-fetch-intercept-close .jimi-black-item a:hover{background:transparent !important;color:#b0b0b0 !important}.jimi-fetch-intercept.jimi-fetch-intercept-close:hover{color:#b0b0b0 !important}.jimi-select-input{background:transparent;text-align:right;height:22px;border-radius:6px;border:1px solid transparent;padding:0 8px;line-height:22px;cursor:pointer}.jimi-select-input:hover{background:#ffffff;border:1px solid #e0e0e0}.jimi-select-icon{margin-left:4px}.jimi-option-box{position:absolute;top:24px;right:0;background:#e9e9e8;z-index:10;padding:6px;border-radius:6px;border:1px solid #e0e0e0;box-shadow:2px 2px 4px #dbdbdb,-2px -2px 4px #dbdbdb}.jimi-option-item{white-space:pre;cursor:default;padding:0 6px 0 24px;border-radius:4px;height:24px;line-height:24px;position:relative}.jimi-option-item:hover{color:#fff;background:#007aff}.jimi-option-item[data-choose="true"]::before{content:'✓';position:absolute;left:6px}.jimi-background-item{position:relative}.jimi-background-item input{position:absolute;visibility:hidden}.jimi-background-item input:checked+div+div{border-color:#007aff}.jimi-background-item input:checked+div+div+div{color:#272726}.jimi-background-item .jimi-background-item-div{border-radius:8px;height:46px;width:68px;margin:4px}.jimi-background-item .jimi-background-item-border{height:46px;width:68px;border-radius:12px;position:absolute;top:0;left:0;border:4px solid transparent}.jimi-background-item-name{font-size:12px;text-align:center;padding-top:8px;color:#777776}#JIMI_BLOCK_WORDS{padding-top:0 !important}.jimi-block-words-content{display:flex;flex-wrap:wrap;cursor:default;margin-bottom:-4px}.jimi-block-words-content>span{padding:0px 6px;border-radius:4px;font-size:13px;margin:0 4px 4px 0;border:1px solid rgba(150,162,170,0.4);cursor:pointer;background:#fff}.jimi-block-words-content>span:hover{color:#ff3b30;border-color:#ff3b30}#JIMI_BLOCKED_USERS,#JIMI_LOCAL_BLOCKED_USERS,#JIMI_BLOCKED_USERS_TAGS{display:flex;flex-wrap:wrap;margin:0 -8px -8px 0}.jimi-black-item{height:24px;line-height:24px;box-sizing:content-box;padding:2px 6px;margin:0 8px 8px 0;display:flex;align-items:center;position:relative;border-radius:4px;border:1px solid #8e8e93;background:#fff;transition:all .2s}.jimi-black-item a:hover{color:#007aff}.jimi-black-item .jimi-black-item-more{width:24px;height:24px;text-align:center;border-radius:4px;cursor:pointer;font-style:normal;margin-left:4px}.jimi-black-item .jimi-black-item-more:hover{background:rgba(142,142,147,0.1)}.jimi-black-item[data-menu-open='true']{z-index:4}.jimi-black-item-menu{position:fixed;z-index:10001;min-width:128px;padding:4px 0;border:1px solid #8e8e93;border-radius:4px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12)}.jimi-black-item-menu span{display:block;height:28px;line-height:28px;padding:0 10px;white-space:nowrap;cursor:pointer}.jimi-black-item-menu span:hover{background:rgba(142,142,147,0.1);color:#007aff}.jimi-black-box>button,.jimi-button-black{margin-left:8px}.jimi-blocked-users-tag{height:24px;line-height:24px;box-sizing:content-box;padding:0 6px;margin:0 8px 8px 0;display:flex;align-items:center;border-radius:6px;border:1px solid #8e8e93;background:#fff}.jimi-remove-blocked-tag:hover{color:#ff3b30;font-weight:600}.jimi-remove-blocked-tag:active{font-weight:200 !important}.jimi-black-tag{padding:0 6px;background:#000;color:#fff;font-size:12px;border-radius:4px;margin-left:8px;display:inline-block;line-height:22px}.jimi-blocked-content-replacement{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jimi-blocked-content-replacement .jimi-black-tag{vertical-align:middle}.jimi-blocked-content-replacement-text{display:inline-block;line-height:22px}.jimi-in-blocked-user-tag{margin-left:4px;border-radius:4px;font-size:12px;border:1px solid #007aff;color:#007aff;background:rgba(0,122,255,0.1);height:16px;line-height:16px;padding:0 4px}.jimi-edit-blocked-tag{display:inline-block;font-size:13px;margin-left:4px;cursor:pointer}.jimi-edit-blocked-tag:hover{font-weight:600 !important;color:#007aff}.jimi-edit-blocked-tag:active{font-weight:200 !important}.jimi-block-user-box button{font-size:12px;margin-left:8px}.jimi-commit{font-size:12px;color:#999}.jimi-commit b{color:#ff3b30}.jimi-flex-wrap{display:flex;flex-wrap:wrap;min-height:24px;align-items:center}.jimi-flex-wrap label{margin-right:4px;display:flex;align-items:center}.jimi-flex-wrap label input[type='radio']{margin:0 4px 0 0}.jimi-video-download{position:absolute;top:20px;left:20px;font-size:24px;color:#fff;cursor:pointer}.jimi-loading{animation:loadingAnimation 2s infinite;font-size:24px;color:#91919d;cursor:none}@keyframes loadingAnimation{from{transform:rotate(0)}to{transform:rotate(360deg)}}.jimi-preview{box-sizing:border-box;position:fixed;height:100%;width:100%;top:0;left:0;overflow-y:auto;z-index:200;background-color:rgba(18,18,18,0.4)}.jimi-preview div{display:flex;justify-content:center;align-items:center;min-height:100%;width:100%}.jimi-preview div img{cursor:zoom-out;user-select:none}.jimi-question-time{font-size:13px !important;font-weight:normal !important;line-height:24px}.jimi-stop-scroll{height:100% !important;overflow:hidden !important}.jimi-export-collection-box{float:right;text-align:right}.jimi-export-collection-box p{font-size:13px;color:#666;margin:4px 0}.jimi-people-export-progress{display:inline-flex;align-items:center;gap:6px;margin-left:8px;color:#666;font-size:12px;vertical-align:middle}.jimi-people-export-progress-track{display:inline-block;width:90px;height:6px;overflow:hidden;border-radius:4px;background:#e5e5e5}.jimi-people-export-progress-bar{display:block;width:0;height:100%;transition:width .2s;background:#007aff}.jimi-pdf-dialog-item{padding:12px;border-bottom:1px solid #eee;margin:12px;background:#ffffff}.jimi-pdf-dialog-title{margin:0 0 1.4em;font-size:20px;font-weight:bold}.jimi-pdf-box-content{width:100%;background:#ffffff}.jimi-pdf-view{width:100%;background:#ffffff;word-break:break-all;white-space:pre-wrap;font-size:13px;overflow-x:hidden}.jimi-pdf-view a{color:#0066ff}.jimi-pdf-view img{max-width:100%}.jimi-pdf-view p{margin:1.4em 0}#JIMI_SUSPENSION_SWITCH{position:fixed;z-index:10;overflow:hidden;border-radius:6px}#JIMI_SUSPENSION_SWITCH>a{display:block;width:36px;height:36px;line-height:36px;text-align:center;background-color:rgba(255,255,255,0.8);color:#333;font-size:16px;cursor:pointer;border:1px solid #e0e0e0;border-top:none}#JIMI_SUSPENSION_SWITCH>a:first-of-type{border-top-left-radius:6px;border-top-right-radius:6px;border-top:1px solid #e0e0e0}#JIMI_SUSPENSION_SWITCH>a:last-of-type{border-bottom-left-radius:6px;border-bottom-right-radius:6px}#JIMI_SUSPENSION_SWITCH>a:hover{font-weight:bold;color:#fff;background:#005ce6}#JIMI_SUSPENSION_SWITCH:hover .lock-icon{display:block}#JIMI_SUSPENSION_SWITCH .lock-icon{font-size:18px;width:36px;height:36px;line-height:36px;text-align:center;display:none;cursor:pointer;z-index:2;position:relative;border-radius:50%}#JIMI_SUSPENSION_SWITCH .lock-icon:hover{background:rgba(0,0,0,0.4)}#JIMI_SUSPENSION_SWITCH .move-mock{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1;display:none;top:0;left:0;cursor:pointer}.key-shadow{border:1px solid #e0e0e0;border-radius:4px;box-shadow:rgba(0,0,0,0.06) 0 1px 1px 0;font-weight:600;min-width:26px;height:26px;padding:0px 6px;text-align:center;margin:0 4px}.jimi-video-link{border:1px solid #ccc;display:inline-block;height:98px;width:fit-content;border-radius:4px;box-sizing:border-box;overflow:hidden;transition:all .3s}.jimi-video-link img{width:98px;height:98px;vertical-align:bottom}.jimi-video-link span{padding:4px 12px;display:inline-block}.jimi-video-link:hover{border-color:#005ce6;color:#005ce6}#JIMI_MESSAGE_BOX{position:fixed;left:0;top:10px;width:100%;z-index:1000}.jimi-message{margin:0 auto;width:500px;height:48px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;box-shadow:0 0 8px #d0d4d6,0 0 8px #e6eaec;margin-bottom:12px;background:#fff}#IMPORT_BY_FILE,#IMPORT_BLACK{display:inline-flex}#IMPORT_BY_FILE input,#IMPORT_BLACK input{display:none}#JIMI_FILTER_BLOCK_WORDS input,#JIMI_FILTER_BLOCK_WORDS_CONTENT input{width:100%}#JIMI_COVER{position:fixed;top:0;left:-200%;width:100%;height:100%;pointer-events:none}`;
+  var INNER_HTML = `<div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_IMAGE"><div><img src=""></div></div><div style="display: none" class="jimi-preview" id="JIMI_PREVIEW_VIDEO"><div><video src="" autoplay loop></video></div></div><iframe class="jimi-pdf-box-content" style="display: none"></iframe>`;
+  var INNER_CSS = `[theme-dark='0'] .jimi-button:hover,[theme-dark='1'] .jimi-button:hover,[theme-dark='2'] .jimi-button:hover,[theme-dark='3'] .jimi-button:hover,[theme-dark='4'] .jimi-button:hover,[theme-dark='7'] .jimi-button:hover{color:#62605e}[theme-dark='5'] .jimi-button:hover{color:#62605e}[theme-dark='6'] .jimi-button:hover{color:#62605e}.jimi-button{outline:none;position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;user-select:none;touch-action:manipulation;font-size:13px;height:24px;padding:0px 8px;border-radius:4px;border:1px solid transparent;background-color:#fff;border-color:rgba(150,162,170,0.4);font-weight:400;box-sizing:border-box}.jimi-button:hover{font-weight:600;background:#eeeeee}.jimi-button:active{background:#e0e0e0;font-weight:400}.jimi-button-red{color:#ff3b30 !important;border:1px solid #ff3b30 !important}.jimi-button-red:hover{color:#ff453a !important;border:1px solid #ff453a !important}.jimi-button:disabled{border-color:#d0d0d0;background-color:rgba(0,0,0,0.08);color:#b0b0b0;cursor:not-allowed}.Profile-mainColumn,.Collections-mainColumn,.CollectionsDetailPage-mainColumn{flex:1}#root .css-1liaddi{margin-right:0}.ContentItem-title div{display:inline}.css-1acwmmj:empty{display:none !important}.css-hr0k1l::after{content:'点击键盘左、右按键切换图片';position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff}.HotLanding-contentItemCount.HotLanding-contentItemCountWithoutSub{margin-top:12px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']{position:fixed;bottom:50px;background:#fff;padding:6px 12px;box-shadow:0 2px 8px #c9c9c9,0 -2px 8px #ffffff;border-radius:8px}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:hover{background:#fff;color:#007aff !important;font-weight:600}body[data-suspension-pickup='true'] .ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true']:active{font-weight:200 !important}.Topstory-container,.css-knqde,.Search-container{width:fit-content !important}.QuestionPage .Question-mainColumn,.QuestionHeader-main{flex:1}.QuestionPage{padding:0}.QuestionPage .List-item{border-bottom:1px dashed #ddd}.QuestionPage .Question-mainColumn{width:initial}.Post-Row-Content .Post-Row-Content-right{width:auto}.QuestionHeader{min-width:auto}.QuestionHeader .QuestionHeader-content{margin:0 auto;padding:0;max-width:initial !important}.GifPlayer.isPlaying img{cursor:pointer !important}.AppHeader-inner{margin:0 auto !important;padding:0 !important;min-width:min-content !important;width:fit-content !important}.zhuanlan .Post-Row-Content-left{flex:1}.zhuanlan .Post-Row-Content-right{margin-left:10px}.zhuanlan .css-1pariuy,.zhuanlan .css-44kk6u{max-width:none}.zhuanlan .css-9w3zhd,.zhuanlan .css-12tmx22,.zhuanlan .css-1bcbfml{width:auto}.Topstory-content>div{width:auto !important}.gear{width:24px;height:24px;position:relative;border-radius:50%;box-sizing:border-box;border:6px solid #8e8e93;background:transparent}.gear_line_1,.gear_line_2,.gear_line_3,.gear_line_4{position:absolute;box-sizing:border-box;width:30px;height:6px;border-radius:2px;border-left:6px solid #8e8e93;border-right:6px solid #8e8e93;left:50%;top:50%;transform:translate(-50%, -50%)}.gear_line_2{transform:translate(-50%, -50%) rotate(45deg)}.gear_line_3{transform:translate(-50%, -50%) rotate(90deg)}.gear_line_4{transform:translate(-50%, -50%) rotate(135deg)}.jimi-zhida{color:#09408e;margin:0 2px}.jimi-zhida span{font-size:10px;display:inline-block;vertical-align:top;height:15px;line-height:15px}#JIMI_HIDDEN{padding-top:0 !important}.jimi-button-black{margin-left:8px}.jimi-blocked-content-replacement{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.jimi-blocked-content-replacement-text{display:inline-block;line-height:22px}.jimi-block-user-box button{font-size:12px;margin-left:8px}.jimi-video-download{position:absolute;top:20px;left:20px;font-size:24px;color:#fff;cursor:pointer}.jimi-loading{animation:loadingAnimation 2s infinite;font-size:24px;color:#91919d;cursor:none}@keyframes loadingAnimation{from{transform:rotate(0)}to{transform:rotate(360deg)}}.jimi-preview{box-sizing:border-box;position:fixed;height:100%;width:100%;top:0;left:0;overflow-y:auto;z-index:200;background-color:rgba(18,18,18,0.4)}.jimi-preview div{display:flex;justify-content:center;align-items:center;min-height:100%;width:100%}.jimi-preview div img{cursor:zoom-out;user-select:none}.jimi-question-time{font-size:13px !important;font-weight:normal !important;line-height:24px}.jimi-stop-scroll{height:100% !important;overflow:hidden !important}.jimi-export-collection-box{float:right;text-align:right}.jimi-export-collection-box p{font-size:13px;color:#666;margin:4px 0}.jimi-people-export-progress{display:inline-flex;align-items:center;gap:6px;margin-left:8px;color:#666;font-size:12px;vertical-align:middle}.jimi-people-export-progress-track{display:inline-block;width:90px;height:6px;overflow:hidden;border-radius:4px;background:#e5e5e5}.jimi-people-export-progress-bar{display:block;width:0;height:100%;transition:width .2s;background:#007aff}.jimi-pdf-dialog-item{padding:12px;border-bottom:1px solid #eee;margin:12px;background:#ffffff}.jimi-pdf-dialog-title{margin:0 0 1.4em;font-size:20px;font-weight:bold}.jimi-pdf-box-content{width:100%;background:#ffffff}.jimi-pdf-view{width:100%;background:#ffffff;word-break:break-all;white-space:pre-wrap;font-size:13px;overflow-x:hidden}.jimi-pdf-view a{color:#0066ff}.jimi-pdf-view img{max-width:100%}.jimi-pdf-view p{margin:1.4em 0}`;
   var CLASS_PEOPLE_EXPORT_PROGRESS = "jimi-people-export-progress";
   var PROFILE_EXPORT_LIMIT = 20;
   var parseJSONAttr = (value) => {
@@ -2501,7 +2300,7 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     if (!total) {
       eventBtn.innerText = buttonText;
       eventBtn.disabled = false;
-      message(emptyText);
+      fnLog(emptyText);
       return;
     }
     try {
@@ -2510,13 +2309,13 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       updateProfileExportProgress(nodeProgress, exportData.length, total);
       if (!exportData.length) throw new Error("empty export data");
       if (exportData.length < total) {
-        message(`仅加载到 ${exportData.length}/${total} 条内容，已导出可加载部分`, 5e3);
+        fnLog(`仅加载到 ${exportData.length}/${total} 条内容，已导出可加载部分`);
       }
       loadIframePrint(eventBtn, exportData.map(toHTML), buttonText);
     } catch (error) {
       eventBtn.innerText = buttonText;
       eventBtn.disabled = false;
-      message("个人主页内容导出失败，请稍后重试", 5e3);
+      fnLog("个人主页内容导出失败，请稍后重试");
       console.error(error);
     }
   };
@@ -3826,31 +3625,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     ev.classList.add(JIMI_HIDDEN_ITEM_CLASS);
     fnLog(msg);
   };
-  var CLASS_MESSAGE = "jimi-message";
-  var messageDoms = [];
-  var message = (value, t = 3e3) => {
-    const time = +/* @__PURE__ */ new Date();
-    const classTime = `jimi-message-${time}`;
-    const nDom = domC("div", {
-      innerHTML: value,
-      className: `${CLASS_MESSAGE} ${classTime}`
-    });
-    const domBox = domById("JIMI_MESSAGE_BOX");
-    if (!domBox) return;
-    domBox.appendChild(nDom);
-    messageDoms.push(nDom);
-    if (messageDoms.length > 3) {
-      const prevDom = messageDoms.shift();
-      prevDom && domBox.removeChild(prevDom);
-    }
-    setTimeout(() => {
-      const nPrevDom = dom(`.${classTime}`);
-      if (nPrevDom) {
-        domById("JIMI_MESSAGE_BOX").removeChild(nPrevDom);
-        messageDoms.shift();
-      }
-    }, t);
-  };
   var mouseEventClick = (element) => {
     if (!element) return;
     const myWindow = isSafari ? window : unsafeWindow;
@@ -4262,11 +4036,11 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
   };
   var cssBackground = (background1, background2) => `${NAME_BACKGROUND_1}{background-color: ${background1}!important;}${NAME_BACKGROUND_2}{background-color:${background2}!important;background:${background2}!important;}${NAME_BACKGROUND_TRANSPARENT}{background-color: transparent!important;background: transparent!important;}`;
   var NAME_BACKGROUND_1 = `body,.Input-wrapper,.toolbar-section button:hover,.PostItem,.VideoAnswerPlayer-stateBar,.skeleton,.Community-ContentLayout,.Report-list tr:nth-child(odd),.LinkCard.new,.Post-content,.Messages-newItem,.New-RightCard-Outer-Dark,.WriteIndexLayout-main,.Messages-item:hover,.Menu-item.is-active,.LiveDetailsPage-root-aLVPj,.WikiLanding,.GlobalSideBar-navLink:hover,.Popover-arrow:after,.Sticky button:hover,.Sticky button:hover div,.Sticky button:hover span,.Sticky a:hover,.Sticky a:hover button,.Sticky a:hover div,.Sticky a:hover span,.Sticky li:hover,.Popover-content button:hover,.index-videoCardItem-bzeJ1,.KfeCollection-IntroCard-newStyle-mobile,.KfeCollection-IntroCard-newStyle-pc,.FeeConsultCard,.Avatar,.TextMessage-sender,.ChatUserListItem--active,.Creator-salt-new-author-menu .Creator-salt-new-author-route .ant-menu-submenu-title:hover,.Creator-salt-new-author-menu .Creator-salt-new-author-route .ant-menu-item:hover,.index-learnPath-dfrcu .index-learnContainer-9QR37 .index-learnShow-p3yvw .index-learnCard-vuCza,.index-courseCard-ebw4r,[class^="index-goodCourseCard-"],.css-m0zh86,.css-1503iqi,.css-wqf2py:hover,.css-1kxql2v,.css-jjc8wi,.css-1gtqxw0,.css-19bjnr2:hover,.css-kwaq2d:hover,.css-1b31wiw:hover,.css-2sopzd,.css-34mzkj,.css-13ev0i:hover,${appendClassStart("Tabs-container,EpisodeList-sectionItem")}`;
-  var NAME_BACKGROUND_2 = `.${CLASS_MESSAGE},.zhuanlan .Post-Row-Content .Post-Row-Content-left,.zhuanlan .Post-content .ContentItem-actions,.zhuanlan .Column-EmptyCard,.Card,.HotItem,.AppHeader,.Topstory-content>div,.PlaceHolder-inner,.PlaceHolder-bg,.ContentItem-actions,.QuestionHeader,.QuestionHeader-footer ,.QZcfWkCJoarhIYxlM_sG,.Sticky,.SearchTabs,.Modal-inner,.Modal-content,.Modal-content div,.Modal-wrapper textarea,.Select-list button:active,.Select-list button:hover,.modal-dialog,.modal-dialog-buttons,.zh-profile-card div,.QuestionAnswers-answerAdd div,.Modal-modal-wf58 div,.Creator-mainColumn .Card>div,.Creator-mainColumn section,.Topbar,.AutoInviteItem-wrapper--desktop,.ProfileHeader-wrapper,.NotificationList,.SettingsFAQ,.SelectorField-options .Select-option.is-selected,.SelectorField-options .Select-option:focus,.KfeCollection-PayModal-modal,.KfeCollection-PayModal-modal div,.Community,.Report-header th,.Report-list tr:nth-child(2n),.Report-Pagination,.CreatorIndex-BottomBox-Item,.CreatorSalt-letter-wrapper,.ColumnPageHeader,.WriteIndexLayout-main>div,.EditorHelpDoc,.EditorHelpDoc div,.EditorHelpDoc h1,.PostEditor-wrapper>div:last-of-type div,.Creator-salt-new-author-content,.Select-option:focus,.ToolsQuestion div,[role="tablist"],.Topic-bar,.List-item .ZVideoToolbar button,.Creator-salt-author-welfare .Creator-salt-author-welfare-card,.Creator-salt-author-welfare-banner,#AnswerFormPortalContainer div,.CreatorTable-tableHead,.BalanceTransactionList-Item,.utils-frostedGlassEffect-2unM,#feedLives,#feedLives div,#feedLives a,.aria-primary-color-style.aria-secondary-background,.aria-primary-color-style.aria-secondary-background div,.aria-primary-color-style.aria-secondary-background h1,.aria-primary-color-style.aria-secondary-background a,.Card-card-2K6v,.Card-card-2K6v div,.LiveDetailsPage-root-aLVPj div,.LiveFooter-root-rXuoG,.PubIndex-CategoriesHeader,.ColumnHomeColumnCard,.Home-tabs,.Home-tabs div,.Home-swiper-container,.Home-swiper-container div,.BottomBarContainer,.ResponderPage-root div,.WikiLandingItemCard,.WikiLandingEntryCard,._Invite_container_30SP,._Invite_container_30SP div,._Coupon_intro_1kIo,._Coupon_list_2uTb div,.ExploreHomePage-square div,.ExploreHomePage-ContentSection-moreButton a,.ExploreSpecialCard,.ExploreRoundtableCard,.ExploreCollectionCard,.ExploreColumnCard,.Notification-white,.QuestionAnswers-answerAdd .InputLike,.QuestionAnswers-answerAdd .InputLike div,.InputLike,.CreatorSalt-community-story-wrapper .CreatorSalt-community-story-table,.Popover-content,.Notifications-footer,.Messages-footer,.Popover-arrow:after,.ant-table-tbody>tr.ant-table-placeholder:hover>td,.SettingsMain>div div:not(.StickerItem-Border):not(.SettingsMain-sideColumn):not(.UserHeader-VipBtn):not(.UserHeader-VipTip):not(.css-60n72z div),.CreatorSalt-community-story-wrapper,.ListShortcut>div:not(.Question-mainColumn),.Chat,.ActionMenu,.Recommendations-Main,.KfeCollection-PcCollegeCard-root,.CreatorSalt-sideBar-wrapper,.ant-menu,.signQr-container,.signQr-rightContainer>div,.Login-options,.Input-wrapper>input,.SignFlowInput-errorMask,.Write-school-search-bar .CreatorSalt-management-search,.CreatorSalt-Content-Management-Index,.Topstory-container .TopstoryTabs>a::after,.ZVideo,.KfeCollection-CreateSaltCard,.CreatorSalt-personalInfo,.CreatorSalt-sideBar-item,.css-d1sc5t,.css-1gvsmgz,.css-u56wtg,.css-1hrberl,.CreatorSalt-community-story-wrapper .CreatorSalt-community-story-header,.ant-table-tbody>tr>td,.CreatorSalt-management-wrapper .CreatorSalt-management-search,.ant-table-thead .ant-table-cell,.QuestionWaiting-typesTopper,.SearchSubTabs,.ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true'],.Post-Row-Content-left,.hot-column-container,.recommend-column,.hot-column,.more-container,.HotSearchCard,.WriteArea>div,.Creator-mainColumn .Card>div>div,.css-qd51c>div:not(.css-13gd32n),.ant-modal-content,.css-1e6hvbc,.css-17pkp3f,.css-kt4t4n,.css-u3vsx3,.css-7v0dz0,.css-1ur5o1n,.css-1503iqi,.css-i9srcr,.css-vpzinw,.css-hdz1a3,.css-1q65fkr,.css-127i0sx,.css-ej3ubf,.css-mv0sgu,.css-qbngl8,.css-1na61gt,.css-h4qwk4,.css-14wefvy>div,.css-tzviga,.css-1e31h8y,.css-13uu85k,.css-16t5hun,.css-nnul91,.css-rt4ywx,.css-ov3mmw,.css-3zr8ne,.css-lxxesj,.css-zylli3,.css-erbxwb,.css-1dja9sh,.css-7b4wc9,.css-1xvgm7g,.css-1ta275q,.css-1ta275q>div,.css-1oqbvad,.css-44kk6u,.css-1pariuy,.css-ksdfxq,.css-b0g50k,.css-3dzt4y,.css-12tmx22,[class6="index-goodCourseCardContainer"],${appendClassStart(
+  var NAME_BACKGROUND_2 = `.zhuanlan .Post-Row-Content .Post-Row-Content-left,.zhuanlan .Post-content .ContentItem-actions,.zhuanlan .Column-EmptyCard,.Card,.HotItem,.AppHeader,.Topstory-content>div,.PlaceHolder-inner,.PlaceHolder-bg,.ContentItem-actions,.QuestionHeader,.QuestionHeader-footer ,.QZcfWkCJoarhIYxlM_sG,.Sticky,.SearchTabs,.Modal-inner,.Modal-content,.Modal-content div,.Modal-wrapper textarea,.Select-list button:active,.Select-list button:hover,.modal-dialog,.modal-dialog-buttons,.zh-profile-card div,.QuestionAnswers-answerAdd div,.Modal-modal-wf58 div,.Creator-mainColumn .Card>div,.Creator-mainColumn section,.Topbar,.AutoInviteItem-wrapper--desktop,.ProfileHeader-wrapper,.NotificationList,.SettingsFAQ,.SelectorField-options .Select-option.is-selected,.SelectorField-options .Select-option:focus,.KfeCollection-PayModal-modal,.KfeCollection-PayModal-modal div,.Community,.Report-header th,.Report-list tr:nth-child(2n),.Report-Pagination,.CreatorIndex-BottomBox-Item,.CreatorSalt-letter-wrapper,.ColumnPageHeader,.WriteIndexLayout-main>div,.EditorHelpDoc,.EditorHelpDoc div,.EditorHelpDoc h1,.PostEditor-wrapper>div:last-of-type div,.Creator-salt-new-author-content,.Select-option:focus,.ToolsQuestion div,[role="tablist"],.Topic-bar,.List-item .ZVideoToolbar button,.Creator-salt-author-welfare .Creator-salt-author-welfare-card,.Creator-salt-author-welfare-banner,#AnswerFormPortalContainer div,.CreatorTable-tableHead,.BalanceTransactionList-Item,.utils-frostedGlassEffect-2unM,#feedLives,#feedLives div,#feedLives a,.aria-primary-color-style.aria-secondary-background,.aria-primary-color-style.aria-secondary-background div,.aria-primary-color-style.aria-secondary-background h1,.aria-primary-color-style.aria-secondary-background a,.Card-card-2K6v,.Card-card-2K6v div,.LiveDetailsPage-root-aLVPj div,.LiveFooter-root-rXuoG,.PubIndex-CategoriesHeader,.ColumnHomeColumnCard,.Home-tabs,.Home-tabs div,.Home-swiper-container,.Home-swiper-container div,.BottomBarContainer,.ResponderPage-root div,.WikiLandingItemCard,.WikiLandingEntryCard,._Invite_container_30SP,._Invite_container_30SP div,._Coupon_intro_1kIo,._Coupon_list_2uTb div,.ExploreHomePage-square div,.ExploreHomePage-ContentSection-moreButton a,.ExploreSpecialCard,.ExploreRoundtableCard,.ExploreCollectionCard,.ExploreColumnCard,.Notification-white,.QuestionAnswers-answerAdd .InputLike,.QuestionAnswers-answerAdd .InputLike div,.InputLike,.CreatorSalt-community-story-wrapper .CreatorSalt-community-story-table,.Popover-content,.Notifications-footer,.Messages-footer,.Popover-arrow:after,.ant-table-tbody>tr.ant-table-placeholder:hover>td,.SettingsMain>div div:not(.StickerItem-Border):not(.SettingsMain-sideColumn):not(.UserHeader-VipBtn):not(.UserHeader-VipTip):not(.css-60n72z div),.CreatorSalt-community-story-wrapper,.ListShortcut>div:not(.Question-mainColumn),.Chat,.ActionMenu,.Recommendations-Main,.KfeCollection-PcCollegeCard-root,.CreatorSalt-sideBar-wrapper,.ant-menu,.signQr-container,.signQr-rightContainer>div,.Login-options,.Input-wrapper>input,.SignFlowInput-errorMask,.Write-school-search-bar .CreatorSalt-management-search,.CreatorSalt-Content-Management-Index,.Topstory-container .TopstoryTabs>a::after,.ZVideo,.KfeCollection-CreateSaltCard,.CreatorSalt-personalInfo,.CreatorSalt-sideBar-item,.css-d1sc5t,.css-1gvsmgz,.css-u56wtg,.css-1hrberl,.CreatorSalt-community-story-wrapper .CreatorSalt-community-story-header,.ant-table-tbody>tr>td,.CreatorSalt-management-wrapper .CreatorSalt-management-search,.ant-table-thead .ant-table-cell,.QuestionWaiting-typesTopper,.SearchSubTabs,.ContentItem-actions.Sticky.is-fixed button[data-zop-retract-question='true'],.Post-Row-Content-left,.hot-column-container,.recommend-column,.hot-column,.more-container,.HotSearchCard,.WriteArea>div,.Creator-mainColumn .Card>div>div,.css-qd51c>div:not(.css-13gd32n),.ant-modal-content,.css-1e6hvbc,.css-17pkp3f,.css-kt4t4n,.css-u3vsx3,.css-7v0dz0,.css-1ur5o1n,.css-1503iqi,.css-i9srcr,.css-vpzinw,.css-hdz1a3,.css-1q65fkr,.css-127i0sx,.css-ej3ubf,.css-mv0sgu,.css-qbngl8,.css-1na61gt,.css-h4qwk4,.css-14wefvy>div,.css-tzviga,.css-1e31h8y,.css-13uu85k,.css-16t5hun,.css-nnul91,.css-rt4ywx,.css-ov3mmw,.css-3zr8ne,.css-lxxesj,.css-zylli3,.css-erbxwb,.css-1dja9sh,.css-7b4wc9,.css-1xvgm7g,.css-1ta275q,.css-1ta275q>div,.css-1oqbvad,.css-44kk6u,.css-1pariuy,.css-ksdfxq,.css-b0g50k,.css-3dzt4y,.css-12tmx22,[class6="index-goodCourseCardContainer"],${appendClassStart(
     "App-root,PcContent-root,TopNavBar-root,CourseConsultation-corner,CourseConsultation-cornerButton,CornerButtonToTop-cornerButton,LearningRouteCard-pathContent,index-item,index-hoverCard,ShelfTopNav-root,ProductCard-root,NewOrderedLayout-root,Tabs-tabHeader,ButtonBar-root,WebPage-root,LearningPathWayCard-pathItem,VideoCourseList-title,Article-header,PcContent-coverFix,index-module,TopNavBar-module,PcContent-module,CourseRecord-module,Learned-module,Tab-module,PcContentBought-module,Media-module"
   )}`;
-  var NAME_BACKGROUND_TRANSPARENT = `,.zhuanlan .Post-content .RichContent-actions.is-fixed,.AnnotationTag,.ProfileHeader-wrapper,.css-1ggwojn,.css-3dzt4y,.css-u4sx7k,#JIMI_SUSPENSION_SWITCH>a,#JIMI_SUSPENSION_SWITCH>a:hover,.VideoPlaceholderContainer>section,.MoreAnswers .List-headerText,.ColumnHomeTop:before,.ColumnHomeBottom,.Popover button:not(.SearchBar-askDropdownButton),.ChatUserListItem .Chat-ActionMenuPopover-Button,#root .App-main footer.css-2pfapc div,#root .App-main footer.css-2pfapc a,#root .css-ov3mmw *,#root .css-g9qnka *,#root .css-74nox5 *,#root .css-s5fc8s>.card *,.WriteIndexMain>div, .Popover-content>div,.css-ysdf4p>div`;
-  var DARK_NAME_COLOR_WHITE = `.${CLASS_MESSAGE},.jimi-export-collection-box p,#JIMI_SUSPENSION_SWITCH>a,.Modal-content,.Modal-content div,.Menu-item.is-active,.Select-list button:active,.Select-list button:hover,.Popover-content button,.Modal-title,.zu-main div,.modal-dialog,.zh-profile-card div,.QuestionAnswers-answerAdd div,.QuestionAnswers-answerAdd label,.Tabs-link,.toolbar-section button,.Modal-modal-wf58 div,.Creator-mainColumn .Card div,.Comments-container div,.SettingsMain div,.KfeCollection-PayModal-modal div,.KfeCollection-CouponCard-selectLabel,.KfeCollection-CouponCard-optionItem-text,.KfeCollection-PayModal-modal-icon,.NavItemClassName,.LinkCard-title,.Creator div,.Creator span,.Modal-wrapper textarea,.EditorHelpDoc,.EditorHelpDoc div,.EditorHelpDoc h1,.FeedbackModal-title,.LiveDetailsPage-root-aLVPj div,.PostEditor-wrapper>div:last-of-type div,.PostEditor-wrapper>div:last-of-type label,.ToolsQuestion a,.ToolsQuestion font,.utils-frostedGlassEffect-2unM div,.utils-frostedGlassEffect-2unM span,.aria-primary-color-style.aria-secondary-background,.aria-primary-color-style.aria-secondary-background div,.aria-primary-color-style.aria-secondary-background h1,.aria-primary-color-style.aria-secondary-background a,.aria-primary-color-style.aria-secondary-background p,.aria-primary-color-style.aria-secondary-background h2,#feedLives div,#feedLives a,.Card-card-2K6v,.Card-card-2K6v div,.Card-card-2K6v h3,._Invite_container_30SP h2,._Invite_container_30SP h1,.ChatListGroup-SectionTitle .Zi,.Qrcode-container>div,.Qrcode-guide-message>div,.signQr-leftContainer button,.signQr-leftContainer a,.ExploreHomePage-square div,.ExploreHomePage-square a,.jsNavigable a,#TopstoryContent h2,[role="contentinfo"] div,.CreatorSalt-personalInfo-name,.ant-collapse>.ant-collapse-item>.ant-collapse-header,.ant-modal-content,.ant-modal-confirm-body .ant-modal-confirm-content,.Creator-salt-new-author-menu .Creator-salt-new-author-route .ant-menu-submenu-title:hover,.Creator-salt-author-welfare .Creator-salt-author-welfare-card h1,.CommentContent,.css-1j6g1cv > span, .css-1j6g1cv > div,blockquote,[class^="css-"],[class^="index-descInfo"],[class^="TopNavBar-tab-"] a,${appendClassStart(
+  var NAME_BACKGROUND_TRANSPARENT = `,.zhuanlan .Post-content .RichContent-actions.is-fixed,.AnnotationTag,.ProfileHeader-wrapper,.css-1ggwojn,.css-3dzt4y,.css-u4sx7k,#JIMI_SUSPENSION_SWITCH>a:hover,.VideoPlaceholderContainer>section,.MoreAnswers .List-headerText,.ColumnHomeTop:before,.ColumnHomeBottom,.Popover button:not(.SearchBar-askDropdownButton),.ChatUserListItem .Chat-ActionMenuPopover-Button,#root .App-main footer.css-2pfapc div,#root .App-main footer.css-2pfapc a,#root .css-ov3mmw *,#root .css-g9qnka *,#root .css-74nox5 *,#root .css-s5fc8s>.card *,.WriteIndexMain>div, .Popover-content>div,.css-ysdf4p>div`;
+  var DARK_NAME_COLOR_WHITE = `.jimi-export-collection-box p,.Modal-content,.Modal-content div,.Menu-item.is-active,.Select-list button:active,.Select-list button:hover,.Popover-content button,.Modal-title,.zu-main div,.modal-dialog,.zh-profile-card div,.QuestionAnswers-answerAdd div,.QuestionAnswers-answerAdd label,.Tabs-link,.toolbar-section button,.Modal-modal-wf58 div,.Creator-mainColumn .Card div,.Comments-container div,.SettingsMain div,.KfeCollection-PayModal-modal div,.KfeCollection-CouponCard-selectLabel,.KfeCollection-CouponCard-optionItem-text,.KfeCollection-PayModal-modal-icon,.NavItemClassName,.LinkCard-title,.Creator div,.Creator span,.Modal-wrapper textarea,.EditorHelpDoc,.EditorHelpDoc div,.EditorHelpDoc h1,.FeedbackModal-title,.LiveDetailsPage-root-aLVPj div,.PostEditor-wrapper>div:last-of-type div,.PostEditor-wrapper>div:last-of-type label,.ToolsQuestion a,.ToolsQuestion font,.utils-frostedGlassEffect-2unM div,.utils-frostedGlassEffect-2unM span,.aria-primary-color-style.aria-secondary-background,.aria-primary-color-style.aria-secondary-background div,.aria-primary-color-style.aria-secondary-background h1,.aria-primary-color-style.aria-secondary-background a,.aria-primary-color-style.aria-secondary-background p,.aria-primary-color-style.aria-secondary-background h2,#feedLives div,#feedLives a,.Card-card-2K6v,.Card-card-2K6v div,.Card-card-2K6v h3,._Invite_container_30SP h2,._Invite_container_30SP h1,.ChatListGroup-SectionTitle .Zi,.Qrcode-container>div,.Qrcode-guide-message>div,.signQr-leftContainer button,.signQr-leftContainer a,.ExploreHomePage-square div,.ExploreHomePage-square a,.jsNavigable a,#TopstoryContent h2,[role="contentinfo"] div,.CreatorSalt-personalInfo-name,.ant-collapse>.ant-collapse-item>.ant-collapse-header,.ant-modal-content,.ant-modal-confirm-body .ant-modal-confirm-content,.Creator-salt-new-author-menu .Creator-salt-new-author-route .ant-menu-submenu-title:hover,.Creator-salt-author-welfare .Creator-salt-author-welfare-card h1,.CommentContent,.css-1j6g1cv > span, .css-1j6g1cv > div,blockquote,[class^="css-"],[class^="index-descInfo"],[class^="TopNavBar-tab-"] a,${appendClassStart(
     "index-title,CourseConsultation-tip,index-text,index-number,CourseDescription-playCount,LecturerList-title,LearningRouteCard-title,index-tabItemLabel,VideoCourseCard-module,TextTruncation-module"
   )}`;
   var DARK_NAME_COLOR_BLACK = `css-1x3upj1,.PlaceHolder-inner,.PlaceHolder-mask path`;
@@ -5250,11 +5024,9 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
           return;
         }
         if (index2 === images.length - 1) {
-          message("已经是最后一张了");
           return;
         }
         if (index2 === 0) {
-          message("已经是第一张了");
           return;
         }
       }
@@ -5672,22 +5444,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
     const tint = isIPhoneLayout ? '<div id="JIMI_SAFARI_TINT" aria-hidden="true"></div>' : '';
     document.body.appendChild(domC("div", { id: "JIMI_MAIN", innerHTML: tint + INNER_HTML }));
   };
-  var appendHomeLink = (domMain = document.body) => {
-    const userInfo = store.getUserInfo();
-    const boxToZhihu = dom(".jimi-to-zhihu", domMain);
-    if (dom(".jimi-home-link") || !userInfo || !boxToZhihu) return;
-    const hrefUser = userInfo.url ? userInfo.url.replace("/api/v4", "") : "";
-    if (!hrefUser) return;
-    boxToZhihu.appendChild(
-      domC("a", {
-        href: hrefUser,
-        target: "_blank",
-        innerText: "前往个人主页",
-        className: "jimi-home-link jimi-button",
-        style: "width: 100px;"
-      })
-    );
-  };
   var FAST_TRIGGER_DELAY = 120;
   var HEAVY_TRIGGER_DELAY = 700;
   var HEAVY_MIN_INTERVAL = 1500;
@@ -5890,7 +5646,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
             interceptionResponse(res, /\api\/v4\/members\/[^/]+\/articles/, (r) => setUserArticle(r.data, res.url));
             interceptionResponse(res, /\/api\/v4\/me\?/, (r) => {
               setUserInfo(r);
-              appendHomeLink();
             });
             interceptionResponse(res, /\/api\/v4\/comment_v5/, (r) => formatCommentAuthors(r.data));
             interceptionResponse(res, /\/api\/v4\/questions\/[^/]+\/feeds/, (r) => {
@@ -6022,7 +5777,6 @@ Changes and attribution: https://github.com/kieran107/zhihu-plugin/blob/main/THI
       if (event.key === "Escape") {
         const preview = [myPreview.idImg, myPreview.idVideo].map(domById).find((node) => node?.style.display === "block");
         if (preview) { myPreview.hide(preview); return; }
-        if (domById(ID_EXTRA_DIALOG)?.dataset.status === "open") closeExtra();
         keyEscCloseCommentDialog && closeCommentDialog();
       }
       if (event.key === "o") {
